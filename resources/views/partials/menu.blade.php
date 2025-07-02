@@ -243,6 +243,28 @@
                 </ul>
             </li>
         @endcan
+        @can('moloni_access')
+            <li class="c-sidebar-nav-dropdown {{ request()->is("admin/moloni-suplier-invoices*") ? "c-show" : "" }}">
+                <a class="c-sidebar-nav-dropdown-toggle" href="#">
+                    <i class="fa-fw fas fa-file-invoice-dollar c-sidebar-nav-icon">
+
+                    </i>
+                    {{ trans('cruds.moloni.title') }}
+                </a>
+                <ul class="c-sidebar-nav-dropdown-items">
+                    @can('moloni_suplier_invoice_access')
+                        <li class="c-sidebar-nav-item">
+                            <a href="{{ route("admin.moloni-suplier-invoices.index") }}" class="c-sidebar-nav-link {{ request()->is("admin/moloni-suplier-invoices") || request()->is("admin/moloni-suplier-invoices/*") ? "c-active" : "" }}">
+                                <i class="fa-fw far fa-file-alt c-sidebar-nav-icon">
+
+                                </i>
+                                {{ trans('cruds.moloniSuplierInvoice.title') }}
+                            </a>
+                        </li>
+                    @endcan
+                </ul>
+            </li>
+        @endcan
         @if(file_exists(app_path('Http/Controllers/Auth/ChangePasswordController.php')))
             @can('profile_password_edit')
                 <li class="c-sidebar-nav-item">

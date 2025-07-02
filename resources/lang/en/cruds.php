@@ -301,5 +301,33 @@ return [
             'deleted_at_helper'   => ' ',
         ],
     ],
+    'moloni' => [
+        'title'          => 'Moloni',
+        'title_singular' => 'Moloni',
+    ],
+    'moloniSuplierInvoice' => [
+        'title'          => 'Moloni Suplier Invoice',
+        'title_singular' => 'Moloni Suplier Invoice',
+        'fields'         => [
+            'id'                => 'ID',
+            'id_helper'         => ' ',
+            'user'              => 'User',
+            'user_helper'       => ' ',
+            'category'          => 'Category',
+            'category_helper'   => ' ',
+            'photo'             => 'Photo',
+            'photo_helper'      => ' ',
+            'data'              => 'Data',
+            'data_helper'       => ' ',
+            'handled'           => 'Handled',
+            'handled_helper'    => ' ',
+            'created_at'        => 'Created at',
+            'created_at_helper' => ' ',
+            'updated_at'        => 'Updated at',
+            'updated_at_helper' => ' ',
+            'deleted_at'        => 'Deleted at',
+            'deleted_at_helper' => ' ',
+        ],
+    ],
 
 ];
