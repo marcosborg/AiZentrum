@@ -134,13 +134,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::resource('bots', 'BotController');
 
     // Moloni Suplier Invoice
+    Route::post('moloni-suplier-invoices/{moloniSuplierInvoice}/launch', [MoloniSuplierInvoiceController::class, 'launchToMoloni'])
+        ->name('moloni-suplier-invoices.launch');
+
     Route::delete('moloni-suplier-invoices/destroy', 'MoloniSuplierInvoiceController@massDestroy')->name('moloni-suplier-invoices.massDestroy');
     Route::post('moloni-suplier-invoices/media', 'MoloniSuplierInvoiceController@storeMedia')->name('moloni-suplier-invoices.storeMedia');
     Route::post('moloni-suplier-invoices/ckmedia', 'MoloniSuplierInvoiceController@storeCKEditorImages')->name('moloni-suplier-invoices.storeCKEditorImages');
     Route::resource('moloni-suplier-invoices', 'MoloniSuplierInvoiceController');
-
-    Route::post('moloni-suplier-invoices/{moloniSuplierInvoice}/launch', [MoloniSuplierInvoiceController::class, 'launchToMoloni'])
-        ->name('admin.moloni-suplier-invoices.launch');
 });
 
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
