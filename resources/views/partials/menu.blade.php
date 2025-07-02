@@ -243,48 +243,6 @@
                 </ul>
             </li>
         @endcan
-        @can('moloni_access')
-            <li class="c-sidebar-nav-dropdown {{ request()->is("admin/moloni-invoices*") ? "c-show" : "" }} {{ request()->is("admin/moloni-items*") ? "c-show" : "" }}">
-                <a class="c-sidebar-nav-dropdown-toggle" href="#">
-                    <i class="fa-fw fas fa-file-invoice-dollar c-sidebar-nav-icon">
-
-                    </i>
-                    {{ trans('cruds.moloni.title') }}
-                </a>
-                <ul class="c-sidebar-nav-dropdown-items">
-                    @can('moloni_new_invoice_access')
-                        <li class="c-sidebar-nav-item">
-                            <a href="{{ route("admin.moloni-new-invoices.index") }}" class="c-sidebar-nav-link {{ request()->is("admin/moloni-new-invoices") || request()->is("admin/moloni-new-invoices/*") ? "c-active" : "" }}">
-                                <i class="fa-fw fas fa-plus c-sidebar-nav-icon">
-
-                                </i>
-                                {{ trans('cruds.moloniNewInvoice.title') }}
-                            </a>
-                        </li>
-                    @endcan
-                    @can('moloni_invoice_access')
-                        <li class="c-sidebar-nav-item">
-                            <a href="{{ route("admin.moloni-invoices.index") }}" class="c-sidebar-nav-link {{ request()->is("admin/moloni-invoices") || request()->is("admin/moloni-invoices/*") ? "c-active" : "" }}">
-                                <i class="fa-fw fas fa-file-invoice-dollar c-sidebar-nav-icon">
-
-                                </i>
-                                {{ trans('cruds.moloniInvoice.title') }}
-                            </a>
-                        </li>
-                    @endcan
-                    @can('moloni_item_access')
-                        <li class="c-sidebar-nav-item">
-                            <a href="{{ route("admin.moloni-items.index") }}" class="c-sidebar-nav-link {{ request()->is("admin/moloni-items") || request()->is("admin/moloni-items/*") ? "c-active" : "" }}">
-                                <i class="fa-fw fas fa-list-ul c-sidebar-nav-icon">
-
-                                </i>
-                                {{ trans('cruds.moloniItem.title') }}
-                            </a>
-                        </li>
-                    @endcan
-                </ul>
-            </li>
-        @endcan
         @if(file_exists(app_path('Http/Controllers/Auth/ChangePasswordController.php')))
             @can('profile_password_edit')
                 <li class="c-sidebar-nav-item">

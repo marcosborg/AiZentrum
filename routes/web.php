@@ -133,26 +133,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::delete('bots/destroy', 'BotController@massDestroy')->name('bots.massDestroy');
     Route::resource('bots', 'BotController');
 
-    // Moloni Invoice
-    Route::delete('moloni-invoices/destroy', 'MoloniInvoiceController@massDestroy')->name('moloni-invoices.massDestroy');
-    Route::post('moloni-invoices/media', 'MoloniInvoiceController@storeMedia')->name('moloni-invoices.storeMedia');
-    Route::post('moloni-invoices/ckmedia', 'MoloniInvoiceController@storeCKEditorImages')->name('moloni-invoices.storeCKEditorImages');
-    Route::resource('moloni-invoices', 'MoloniInvoiceController');
-    Route::post('moloni-invoices/{moloniInvoice}/process-ocr', 'MoloniNewInvoiceController@processOcr')->name('moloni-new-invoices.process-ocr');
-    Route::post('moloni-invoices/{moloniInvoice}/generate-references', 'MoloniNewInvoiceController@generateReferences')->name('moloni-invoices.generate-references');
-    Route::post('moloni-invoices/sync', [MoloniNewInvoiceController::class, 'sync'])->name('moloni-invoices.sync');
-
-    // Moloni Item
-    Route::post('moloni-invoices/{moloniInvoice}/store-items', 'MoloniItemController@storeMultiple')->name('moloni-items.store-multiple');
-
-    Route::delete('moloni-items/destroy', 'MoloniItemController@massDestroy')->name('moloni-items.massDestroy');
-    Route::resource('moloni-items', 'MoloniItemController');
-
-    // Moloni New Invoice
-    Route::get('moloni-new-invoices', 'MoloniNewInvoiceController@index')->name('moloni-new-invoices.index');
-
-    Route::post('moloni-invoices/sync', [MoloniNewInvoiceController::class, 'sync'])->name('moloni-invoices.sync');
-
 });
 
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
