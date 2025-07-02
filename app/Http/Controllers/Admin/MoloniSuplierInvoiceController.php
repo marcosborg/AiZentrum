@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
+use OpenAI\Laravel\Facades\OpenAI;
 
 class MoloniSuplierInvoiceController extends Controller
 {
@@ -102,7 +103,20 @@ class MoloniSuplierInvoiceController extends Controller
             Media::whereIn('id', $media)->update(['model_id' => $moloniSuplierInvoice->id]);
         }
 
-        return redirect()->route('admin.moloni-suplier-invoices.index');
+        // Obter a imagem da fatura
+        $photo = $moloniSuplierInvoice->photo;
+        if ($photo) {
+            // Gerar URL pública
+            $imageUrl = $photo->getUrl();
+
+            // Analisar a imagem com GPT-4o visão
+            $json = $this->analyzeInvoiceImage($imageUrl);
+
+            // Guardar o JSON no campo data
+            $moloniSuplierInvoice->update(['data' => json_encode($json)]);
+        }
+
+        return redirect()->route('admin.moloni-suplier-invoices.edit', [$moloniSuplierInvoice->id]);
     }
 
     public function edit(MoloniSuplierInvoice $moloniSuplierInvoice)
@@ -131,7 +145,29 @@ class MoloniSuplierInvoiceController extends Controller
             $moloniSuplierInvoice->photo->delete();
         }
 
-        return redirect()->route('admin.moloni-suplier-invoices.index');
+        $photoUpdated = false;
+
+        if ($request->input('photo', false)) {
+            if (! $moloniSuplierInvoice->photo || $request->input('photo') !== $moloniSuplierInvoice->photo->file_name) {
+                if ($moloniSuplierInvoice->photo) {
+                    $moloniSuplierInvoice->photo->delete();
+                }
+                $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('photo'))))->toMediaCollection('photo');
+                $photoUpdated = true;
+            }
+        } elseif ($moloniSuplierInvoice->photo && !$request->input('photo')) {
+            $moloniSuplierInvoice->photo->delete();
+            $photoUpdated = true;
+        }
+
+        // Se a imagem foi alterada, ou se quiseres sempre reprocessar, chama analyze
+        if ($moloniSuplierInvoice->photo && ($photoUpdated || true)) {
+            $imageUrl = $moloniSuplierInvoice->photo->getUrl();
+            $json = $this->analyzeInvoiceImage($imageUrl);
+            $moloniSuplierInvoice->update(['data' => json_encode($json)]);
+        }
+
+        return redirect()->route('admin.moloni-suplier-invoices.edit', [$moloniSuplierInvoice->id]);
     }
 
     public function show(MoloniSuplierInvoice $moloniSuplierInvoice)
@@ -173,5 +209,37 @@ class MoloniSuplierInvoiceController extends Controller
         $media         = $model->addMediaFromRequest('upload')->toMediaCollection('ck-media');
 
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
+    }
+
+    private function analyzeInvoiceImage(string $imageUrl): array
+    {
+        $response = OpenAI::chat()->create([
+            'model' => 'gpt-4o',
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => 'És um assistente que analisa imagens de faturas de fornecedores e devolve sempre o mesmo JSON estruturado com fornecedor, comprador, itens, totais e detalhes de pagamento.'
+                ],
+                [
+                    'role' => 'user',
+                    'content' => [
+                        [
+                            'type' => 'text',
+                            'text' => 'Por favor, analisa esta imagem de fatura e devolve o JSON estruturado com os campos: invoice_date, invoice_number, supplier, buyer, items, totals, taxes (opcional) e payment (opcional).'
+                        ],
+                        [
+                            'type' => 'image_url',
+                            'image_url' => [
+                                'url' => $imageUrl,
+                            ]
+                        ]
+                    ],
+                ],
+            ],
+        ]);
+
+        $content = $response->choices[0]->message->content ?? '{}';
+
+        return json_decode($content, true);
     }
 }
