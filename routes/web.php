@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Admin\MoloniNewInvoiceController;
+use App\Http\Controllers\Admin\MoloniSuplierInvoiceController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
 
