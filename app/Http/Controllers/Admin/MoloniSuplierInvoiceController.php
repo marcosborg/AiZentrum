@@ -150,7 +150,7 @@ class MoloniSuplierInvoiceController extends Controller
             $imageUrl = $moloniSuplierInvoice->photo->getUrl();
             $json = $this->analyzeInvoiceImage($imageUrl);
             $normalizedJson = $this->normalizeInvoiceJson($json);
-            $moloniSuplierInvoice->update(['data' => json_encode($normalizedJson)]);            
+            $moloniSuplierInvoice->update(['data' => json_encode($normalizedJson)]);
         }
 
         return redirect()->route('admin.moloni-suplier-invoices.edit', [$moloniSuplierInvoice->id]);
@@ -315,5 +315,49 @@ class MoloniSuplierInvoiceController extends Controller
 
         return redirect()->route('admin.moloni-suplier-invoices.index')
             ->with('success', 'Fatura lançada com sucesso na Moloni!');
+    }
+
+    private function analyzeInvoiceImage(string $imageUrl): array
+    {
+        $response = OpenAI::chat()->create([
+            'model' => 'gpt-4o',
+            'messages' => [
+                [
+                    'role' => 'user',
+                    'content' => [
+                        [
+                            'type' => 'text',
+                            'text' => 'Analisa esta imagem de fatura e responde apenas com JSON puro (sem texto explicativo) nos campos: invoice_date, invoice_number, supplier (nome e NIF), items, totals, taxes (opcional) e payment (opcional). NÃO escrevas mais nada além do JSON.'
+                        ],
+                        [
+                            'type' => 'image_url',
+                            'image_url' => ['url' => $imageUrl]
+                        ]
+                    ],
+                ],
+            ],
+        ]);
+
+        $content = $response->choices[0]->message->content ?? '{}';
+
+        \Log::debug('GPT response content: ' . $content);
+
+        // Tenta extrair o JSON com regex
+        if (preg_match('/\{.*\}/s', $content, $matches)) {
+            $content = $matches[0];
+        }
+
+        $json = json_decode($content, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            \Log::error('Falha ao fazer json_decode.', [
+                'error' => json_last_error_msg(),
+                'content' => $content,
+            ]);
+
+            throw new \RuntimeException('A resposta do GPT não é um JSON válido.');
+        }
+
+        return $json;
     }
 }
