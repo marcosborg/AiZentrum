@@ -135,19 +135,25 @@ class MoloniSuplierInvoiceController extends Controller
     {
         $moloniSuplierInvoice->update($request->all());
 
+        $photoUpdated = false;
+
         if ($request->input('photo', false)) {
+            // Se não existe ou mudou a foto
             if (! $moloniSuplierInvoice->photo || $request->input('photo') !== $moloniSuplierInvoice->photo->file_name) {
                 if ($moloniSuplierInvoice->photo) {
                     $moloniSuplierInvoice->photo->delete();
                 }
                 $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('photo'))))->toMediaCollection('photo');
+                $photoUpdated = true;
             }
         } elseif ($moloniSuplierInvoice->photo && !$request->input('photo')) {
+            // Se foi removida a foto existente
             $moloniSuplierInvoice->photo->delete();
+            $photoUpdated = true;
         }
 
-        // Reanalisa sempre a imagem atual (se existir)
-        if ($moloniSuplierInvoice->photo) {
+        // Só reprocessa a imagem se houve alteração
+        if ($moloniSuplierInvoice->photo && $photoUpdated) {
             $imageUrl = $moloniSuplierInvoice->photo->getUrl();
             $json = $this->analyzeInvoiceImage($imageUrl);
             $moloniSuplierInvoice->update(['data' => json_encode($json)]);
@@ -155,7 +161,6 @@ class MoloniSuplierInvoiceController extends Controller
 
         return redirect()->route('admin.moloni-suplier-invoices.edit', [$moloniSuplierInvoice->id]);
     }
-
 
     public function show(MoloniSuplierInvoice $moloniSuplierInvoice)
     {
