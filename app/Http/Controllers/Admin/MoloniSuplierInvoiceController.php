@@ -200,15 +200,49 @@ class MoloniSuplierInvoiceController extends Controller
 
     private function normalizeInvoiceJson(array $raw): array
     {
+        // Inicializa supplier name e NIF com valores default
+        $supplierName = 'DESCONHECIDO';
+        $supplierNif = '';
+
+        if (isset($raw['supplier'])) {
+            $supplier = $raw['supplier'];
+
+            // Caso supplier seja string (ex.: "SOFRAPA Automóveis, S.A.")
+            if (is_string($supplier)) {
+                $supplierName = $supplier;
+            }
+            // Caso supplier seja array
+            elseif (is_array($supplier)) {
+                // supplier['name'] pode ser string ou array
+                if (isset($supplier['name'])) {
+                    if (is_string($supplier['name'])) {
+                        $supplierName = $supplier['name'];
+                    } elseif (is_array($supplier['name'])) {
+                        // supplier.name.nome + supplier.name.NIF
+                        $supplierName = $supplier['name']['nome'] ?? $supplierName;
+                        $supplierNif = $supplier['name']['NIF'] ?? $supplierNif;
+                    }
+                }
+
+                // supplier['NIF'] (prioridade sobre o anterior)
+                if (isset($supplier['NIF'])) {
+                    $supplierNif = $supplier['NIF'];
+                }
+
+                // supplier['nif'] minúsculo
+                if (isset($supplier['nif'])) {
+                    $supplierNif = $supplier['nif'];
+                }
+            }
+        }
+
         return [
             'invoice_date' => $raw['invoice_date'] ?? now()->toDateString(),
             'invoice_number' => $raw['invoice_number'] ?? 'SEM-NUMERO',
 
             'supplier' => [
-                'name' => $raw['supplier']['name']
-                    ?? ($raw['supplier'] ?? 'DESCONHECIDO'),
-                'NIF' => $raw['supplier']['NIF']
-                    ?? ($raw['supplier']['nif'] ?? ''),
+                'name' => $supplierName,
+                'NIF' => $supplierNif,
             ],
 
             'buyer' => [
@@ -240,6 +274,7 @@ class MoloniSuplierInvoiceController extends Controller
         ];
     }
 
+
     function parseEuroNumber(string $number): float
     {
         // Remove espaços, troca vírgula por ponto, e converte para float
@@ -257,10 +292,16 @@ class MoloniSuplierInvoiceController extends Controller
         $moloni = new MoloniService();
 
         // 1) Procurar fornecedor na Moloni
-        $supplierNif = $json['supplier']['NIF'] ?? null;
-        $supplierName = is_array($json['supplier']) ? ($json['supplier']['name'] ?? null) : $json['supplier'];
+        $supplierData = $json['supplier'] ?? [];
+        $vat = $supplierData['nif'] ?? null;
+        $name = $supplierData ?? null;
 
-        $supplier = $moloni->findSupplier($supplierNif, $supplierName);
+        dd([
+            'vat' => $vat,
+            'name' => $name
+        ]);
+
+        $supplier = $moloni->findSupplier($vat, $name);
 
         if (!$supplier) {
             return back()->withErrors('Fornecedor não encontrado na Moloni: ' . ($supplierNif ?: $supplierName));
