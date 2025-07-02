@@ -135,32 +135,27 @@ class MoloniSuplierInvoiceController extends Controller
     {
         $moloniSuplierInvoice->update($request->all());
 
-        $photoUpdated = false;
-
         if ($request->input('photo', false)) {
-            // Se não existe ou mudou a foto
             if (! $moloniSuplierInvoice->photo || $request->input('photo') !== $moloniSuplierInvoice->photo->file_name) {
                 if ($moloniSuplierInvoice->photo) {
                     $moloniSuplierInvoice->photo->delete();
                 }
                 $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('photo'))))->toMediaCollection('photo');
-                $photoUpdated = true;
             }
         } elseif ($moloniSuplierInvoice->photo && !$request->input('photo')) {
-            // Se foi removida a foto existente
             $moloniSuplierInvoice->photo->delete();
-            $photoUpdated = true;
         }
 
-        // Só reprocessa a imagem se houve alteração
-        if ($moloniSuplierInvoice->photo && $photoUpdated) {
+        if ($moloniSuplierInvoice->photo) {
             $imageUrl = $moloniSuplierInvoice->photo->getUrl();
             $json = $this->analyzeInvoiceImage($imageUrl);
-            $moloniSuplierInvoice->update(['data' => json_encode($json)]);
+            $normalizedJson = $this->normalizeInvoiceJson($json);
+            $moloniSuplierInvoice->update(['data' => json_encode($normalizedJson)]);            
         }
 
         return redirect()->route('admin.moloni-suplier-invoices.edit', [$moloniSuplierInvoice->id]);
     }
+
 
     public function show(MoloniSuplierInvoice $moloniSuplierInvoice)
     {
@@ -203,63 +198,46 @@ class MoloniSuplierInvoiceController extends Controller
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
     }
 
-    private function analyzeInvoiceImage(string $imageUrl): array
+    private function normalizeInvoiceJson(array $raw): array
     {
-        $response = OpenAI::chat()->create([
-            'model' => 'gpt-4o',
-            'messages' => [
-                [
-                    'role' => 'user',
-                    'content' => [
-                        [
-                            'type' => 'text',
-                            'text' => 'Analisa esta imagem de fatura e responde apenas com JSON puro (sem texto explicativo) nos campos: invoice_date, invoice_number, supplier, buyer, items, totals, taxes (opcional) e payment (opcional). NÃO escrevas mais nada além do JSON.'
-                        ],
-                        [
-                            'type' => 'image_url',
-                            'image_url' => ['url' => $imageUrl]
-                        ]
-                    ],
-                ],
-                [
-                    'role' => 'user',
-                    'content' => [
-                        [
-                            'type' => 'text',
-                            'text' => 'Por favor, analisa esta imagem de fatura e devolve exclusivamente um JSON estruturado com os campos: invoice_date, invoice_number, supplier, buyer, items, totals, taxes (opcional) e payment (opcional). Sem texto adicional.'
-                        ],
-                        [
-                            'type' => 'image_url',
-                            'image_url' => [
-                                'url' => $imageUrl,
-                            ]
-                        ]
-                    ],
-                ],
+        return [
+            'invoice_date' => $raw['invoice_date'] ?? now()->toDateString(),
+            'invoice_number' => $raw['invoice_number'] ?? 'SEM-NUMERO',
+
+            'supplier' => [
+                'name' => $raw['supplier']['name']
+                    ?? ($raw['supplier'] ?? 'DESCONHECIDO'),
+                'NIF' => $raw['supplier']['NIF']
+                    ?? ($raw['supplier']['nif'] ?? ''),
             ],
-        ]);
 
-        $content = $response->choices[0]->message->content ?? '{}';
+            'buyer' => [
+                'name' => 'AIRBAGS-ZENTRUM, LDA',
+                'NIF' => '508263069',
+            ],
 
-        \Log::debug('GPT response content: ' . $content);
+            'items' => collect($raw['items'] ?? [])->map(function ($item) {
+                return [
+                    'description' => $item['description'] ?? '',
+                    'brand' => $item['brand'] ?? '',
+                    'reference' => $item['reference'] ?? '',
+                    'quantity' => (float) ($item['quantity'] ?? 0),
+                    'unit_price' => (float) ($item['unit_price'] ?? 0),
+                    'vat' => (float) ($item['vat'] ?? 23),
+                    'total' => (float) ($item['total'] ?? 0),
+                ];
+            })->toArray(),
 
-        // Tenta extrair o JSON com regex
-        if (preg_match('/\{.*\}/s', $content, $matches)) {
-            $content = $matches[0];
-        }
+            'totals' => [
+                'subtotal' => (float) ($raw['totals']['subtotal'] ?? 0),
+                'tax' => (float) ($raw['totals']['tax'] ?? 0),
+                'total' => (float) ($raw['totals']['total'] ?? 0),
+            ],
 
-        $json = json_decode($content, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            \Log::error('Falha ao fazer json_decode.', [
-                'error' => json_last_error_msg(),
-                'content' => $content,
-            ]);
-
-            throw new \RuntimeException('A resposta do GPT não é um JSON válido.');
-        }
-
-        return $json;
+            'payment' => [
+                'terms' => $raw['payment']['terms'] ?? '30 dias',
+            ],
+        ];
     }
 
     function parseEuroNumber(string $number): float
@@ -279,10 +257,15 @@ class MoloniSuplierInvoiceController extends Controller
         $moloni = new MoloniService();
 
         // 1) Procurar fornecedor na Moloni
-        $supplier = $moloni->findSupplierByVat($json['buyer']['NIF'] ?? '');
+        $supplierNif = $json['supplier']['NIF'] ?? null;
+        $supplierName = is_array($json['supplier']) ? ($json['supplier']['name'] ?? null) : $json['supplier'];
+
+        $supplier = $moloni->findSupplier($supplierNif, $supplierName);
+
         if (!$supplier) {
-            return back()->withErrors('Fornecedor não existe na Moloni (NIF: ' . ($json['buyer']['NIF'] ?? 'desconhecido') . ').');
+            return back()->withErrors('Fornecedor não encontrado na Moloni: ' . ($supplierNif ?: $supplierName));
         }
+
 
         // 2) Montar os items
         $items = [];

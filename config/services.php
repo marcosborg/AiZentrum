@@ -32,13 +32,13 @@ return [
     ],
 
     'moloni' => [
-        'client_id' => env('MOLONI_CLIENT_ID'),
-        'client_secret' => env('MOLONI_CLIENT_SECRET'),
-        'username' => env('MOLONI_USERNAME'),
-        'password' => env('MOLONI_PASSWORD'),
-        'company_id' => env('MOLONI_COMPANY_ID'),
-        'api_url' => env('MOLONI_API_URL'),
-        'document_set_id' => env('MOLONI_DOCUMENT_SET_ID', '784358'), // opcional, mas útil ter default
+        'client_id' => env('MOLONI_CLIENT_ID', 'airbagszentrum'),
+        'client_secret' => env('MOLONI_CLIENT_SECRET', 'e70b951265cca18575fef98831e5007b2da2fcdf'),
+        'username' => env('MOLONI_USERNAME', 'nadinemoreira@zentrum-group.com'),
+        'password' => env('MOLONI_PASSWORD', 'Brun@2008*'),
+        'company_id' => env('MOLONI_COMPANY_ID', '13968'),
+        'api_url' => env('MOLONI_API_URL', 'https://api.moloni.pt/v1'),
+        'document_set_id' => env('MOLONI_DOCUMENT_SET_ID', '784358'),
     ],
 
 

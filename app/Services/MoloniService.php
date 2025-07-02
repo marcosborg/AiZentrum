@@ -12,24 +12,9 @@ class MoloniService
     public function __construct()
     {
         $this->baseUrl = config('services.moloni.api_url');
-        $this->authenticate();
-    }
 
-    private function authenticate(): void
-    {
-        $response = Http::asForm()->post($this->baseUrl . '/grant/', [
-            'grant_type' => 'password',
-            'client_id' => config('services.moloni.client_id'),
-            'client_secret' => config('services.moloni.client_secret'),
-            'username' => config('services.moloni.username'),
-            'password' => config('services.moloni.password'),
-        ]);
-
-        if (!$response->ok() || empty($response['access_token'])) {
-            throw new \Exception('Falha ao autenticar na Moloni: ' . $response->body());
-        }
-
-        $this->accessToken = $response['access_token'];
+        // Obtém token válido do serviço de tokens
+        $this->accessToken = app(MoloniTokenService::class)->getValidAccessToken();
     }
 
     private function request(string $endpoint, array $data): array
@@ -46,22 +31,67 @@ class MoloniService
 
     public function findSupplierByVat(string $vat): ?array
     {
-        $response = $this->request('entities/getByVat/', [
+        return $this->request('entities/getByVat/', [
             'company_id' => config('services.moloni.company_id'),
             'vat' => $vat,
         ]);
+    }
 
-        return $response ?: null;
+    public function findSupplier(string $vat = null, string $name = null): ?array
+    {
+        if (!empty($vat)) {
+            try {
+                $supplier = $this->findSupplierByVat($vat);
+                if ($supplier) {
+                    return $supplier;
+                }
+            } catch (\Exception $e) {
+                \Log::warning("Fornecedor não encontrado por VAT ({$vat}): " . $e->getMessage());
+            }
+        }
+
+        if (!empty($name)) {
+            try {
+                $suppliers = $this->request('entities/getAll/', [
+                    'company_id' => config('services.moloni.company_id'),
+                    'options' => [
+                        'search' => $name,
+                        'search_field' => 'name',
+                        'qty' => 10,
+                    ],
+                ]);
+
+                // Função para normalizar nomes: remove espaços, hífens, acentos e converte para minúsculas
+                $normalize = fn($string) => strtolower(
+                    preg_replace('/[-\s]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $string))
+                );
+
+                $normalizedSearchedName = $normalize($name);
+
+                foreach ($suppliers as $s) {
+                    if (isset($s['name']) && $normalize($s['name']) === $normalizedSearchedName) {
+                        return $s;
+                    }
+                }
+
+                if (!empty($suppliers)) {
+                    // Se não encontrar match "quase exato", devolve o primeiro
+                    return $suppliers[0];
+                }
+            } catch (\Exception $e) {
+                \Log::warning("Fornecedor não encontrado por nome ({$name}): " . $e->getMessage());
+            }
+        }
+
+        return null;
     }
 
     public function findProductByReference(string $reference): ?array
     {
-        $response = $this->request('products/getByReference/', [
+        return $this->request('products/getByReference/', [
             'company_id' => config('services.moloni.company_id'),
             'reference' => $reference,
         ]);
-
-        return $response ?: null;
     }
 
     public function updateProductStock(int $productId, float $newStock): array
