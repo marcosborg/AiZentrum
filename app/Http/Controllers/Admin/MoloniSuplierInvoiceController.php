@@ -225,7 +225,7 @@ class MoloniSuplierInvoiceController extends Controller
                     'content' => [
                         [
                             'type' => 'text',
-                            'text' => 'Por favor, analisa esta imagem de fatura e devolve o JSON estruturado com os campos: invoice_date, invoice_number, supplier, buyer, items, totals, taxes (opcional) e payment (opcional).'
+                            'text' => 'Por favor, analisa esta imagem de fatura e devolve exclusivamente um JSON estruturado com os campos: invoice_date, invoice_number, supplier, buyer, items, totals, taxes (opcional) e payment (opcional). Sem texto adicional.'
                         ],
                         [
                             'type' => 'image_url',
@@ -240,6 +240,20 @@ class MoloniSuplierInvoiceController extends Controller
 
         $content = $response->choices[0]->message->content ?? '{}';
 
-        return json_decode($content, true);
+        \Log::debug('GPT response content: ' . $content);
+
+        $json = json_decode($content, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            \Log::error('Falha ao fazer json_decode do conteúdo retornado pelo GPT.', [
+                'error' => json_last_error_msg(),
+                'content' => $content,
+            ]);
+
+            // Opcionalmente podes lançar exceção para parar o fluxo
+            throw new \RuntimeException('A resposta do GPT não é um JSON válido.');
+        }
+
+        return $json;
     }
 }
