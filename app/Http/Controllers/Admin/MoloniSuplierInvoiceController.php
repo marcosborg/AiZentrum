@@ -15,6 +15,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 use OpenAI\Laravel\Facades\OpenAI;
+use App\Services\MoloniService;
 
 class MoloniSuplierInvoiceController extends Controller
 {
@@ -141,27 +142,12 @@ class MoloniSuplierInvoiceController extends Controller
                 }
                 $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('photo'))))->toMediaCollection('photo');
             }
-        } elseif ($moloniSuplierInvoice->photo) {
-            $moloniSuplierInvoice->photo->delete();
-        }
-
-        $photoUpdated = false;
-
-        if ($request->input('photo', false)) {
-            if (! $moloniSuplierInvoice->photo || $request->input('photo') !== $moloniSuplierInvoice->photo->file_name) {
-                if ($moloniSuplierInvoice->photo) {
-                    $moloniSuplierInvoice->photo->delete();
-                }
-                $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('photo'))))->toMediaCollection('photo');
-                $photoUpdated = true;
-            }
         } elseif ($moloniSuplierInvoice->photo && !$request->input('photo')) {
             $moloniSuplierInvoice->photo->delete();
-            $photoUpdated = true;
         }
 
-        // Se a imagem foi alterada, ou se quiseres sempre reprocessar, chama analyze
-        if ($moloniSuplierInvoice->photo && ($photoUpdated || true)) {
+        // Reanalisa sempre a imagem atual (se existir)
+        if ($moloniSuplierInvoice->photo) {
             $imageUrl = $moloniSuplierInvoice->photo->getUrl();
             $json = $this->analyzeInvoiceImage($imageUrl);
             $moloniSuplierInvoice->update(['data' => json_encode($json)]);
@@ -169,6 +155,7 @@ class MoloniSuplierInvoiceController extends Controller
 
         return redirect()->route('admin.moloni-suplier-invoices.edit', [$moloniSuplierInvoice->id]);
     }
+
 
     public function show(MoloniSuplierInvoice $moloniSuplierInvoice)
     {
@@ -268,5 +255,77 @@ class MoloniSuplierInvoiceController extends Controller
         }
 
         return $json;
+    }
+
+    function parseEuroNumber(string $number): float
+    {
+        // Remove espaços, troca vírgula por ponto, e converte para float
+        return (float) str_replace(',', '.', str_replace(' ', '', $number));
+    }
+
+    public function launchToMoloni(MoloniSuplierInvoice $moloniSuplierInvoice)
+    {
+        $json = json_decode($moloniSuplierInvoice->data, true);
+
+        if (!$json) {
+            return back()->withErrors('O JSON da fatura está vazio ou inválido.');
+        }
+
+        $moloni = new MoloniService();
+
+        // 1) Procurar fornecedor na Moloni
+        $supplier = $moloni->findSupplierByVat($json['buyer']['NIF'] ?? '');
+        if (!$supplier) {
+            return back()->withErrors('Fornecedor não existe na Moloni (NIF: ' . ($json['buyer']['NIF'] ?? 'desconhecido') . ').');
+        }
+
+        // 2) Montar os items
+        $items = [];
+        foreach ($json['items'] as $item) {
+            $product = $moloni->findProductByReference($item['reference']);
+            if (!$product) {
+                return back()->withErrors("Artigo não existe na Moloni: {$item['reference']}");
+            }
+
+            // Opcional: atualizar stock
+            // $moloni->updateProductStock($product['product_id'], nova quantidade);
+
+            $items[] = [
+                'product_id' => $product['product_id'],
+                'name' => $item['description'],
+                'qty' => $this->parseEuroNumber($item['quantity']),
+                'price' => $this->parseEuroNumber($item['unit_price']),
+                'discount' => $this->parseEuroNumber($item['discount']),
+                'exemption_reason' => '', // se precisares
+            ];
+        }
+
+        // 3) Montar payload do purchase
+        $payload = [
+            'company_id' => config('services.moloni.company_id'),
+            'date' => $json['invoice_date'],
+            'expiration_date' => $json['invoice_date'],
+            'document_set_id' => config('services.moloni.document_set_id'),
+            'entity_id' => $supplier['entity_id'],
+            'our_reference' => $json['invoice_number'],
+            'items' => $items,
+            'notes' => 'Fatura inserida automaticamente a partir de análise de imagem.',
+        ];
+
+        // 4) Criar fatura na Moloni
+        try {
+            $response = $moloni->createPurchase($payload);
+        } catch (\Exception $e) {
+            return back()->withErrors('Erro ao lançar fatura na Moloni: ' . $e->getMessage());
+        }
+
+        // 5) Atualizar registo com resposta da Moloni
+        $moloniSuplierInvoice->update([
+            'handled' => true,
+            'moloni_response' => json_encode($response),
+        ]);
+
+        return redirect()->route('admin.moloni-suplier-invoices.index')
+            ->with('success', 'Fatura lançada com sucesso na Moloni!');
     }
 }

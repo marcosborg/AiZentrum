@@ -78,6 +78,13 @@
                     {{ trans('global.save') }}
                 </button>
             </div>
+            <form action="{{ route('admin.moloni-suplier-invoices.launch', $moloniSuplierInvoice) }}" method="POST" onsubmit="return confirm('Tens a certeza que queres lançar esta fatura no Moloni?');">
+                @csrf
+                <button class="btn btn-success" type="submit">
+                    <i class="fas fa-paper-plane"></i> Lançar no Moloni
+                </button>
+            </form>
+
         </form>
     </div>
 </div>

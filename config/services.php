@@ -37,8 +37,10 @@ return [
         'username' => env('MOLONI_USERNAME'),
         'password' => env('MOLONI_PASSWORD'),
         'company_id' => env('MOLONI_COMPANY_ID'),
-        'api_url' => env('MOLONI_API_URL', 'https://api.moloni.pt/v1'),
+        'api_url' => env('MOLONI_API_URL'),
+        'document_set_id' => env('MOLONI_DOCUMENT_SET_ID', '784358'), // opcional, mas útil ter default
     ],
+
 
 
 ];
