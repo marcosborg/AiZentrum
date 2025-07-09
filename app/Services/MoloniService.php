@@ -29,27 +29,21 @@ class MoloniService
         return $response->json();
     }
 
-    public function findSupplierByVat(string $vat): ?array
+    public function createSupplier(string $name, string $nif = '999999990'): array
     {
-        return $this->request('entities/getByVat/', [
+        return $this->request('entities/insert/', [
             'company_id' => config('services.moloni.company_id'),
-            'vat' => $vat,
+            'name' => $name,
+            'vat' => $nif,
+            'language_id' => 1, // Português
+            'country_id' => 1   // Portugal
         ]);
     }
 
-    public function findSupplier(string $vat = null, string $name = null): ?array
-    {
-        if (!empty($vat)) {
-            try {
-                $supplier = $this->findSupplierByVat($vat);
-                if ($supplier) {
-                    return $supplier;
-                }
-            } catch (\Exception $e) {
-                \Log::warning("Fornecedor não encontrado por VAT ({$vat}): " . $e->getMessage());
-            }
-        }
 
+
+    public function findSupplier(string $name): ?array
+    {
         if (!empty($name)) {
             try {
                 $suppliers = $this->request('entities/getAll/', [
@@ -61,7 +55,6 @@ class MoloniService
                     ],
                 ]);
 
-                // Função para normalizar nomes: remove espaços, hífens, acentos e converte para minúsculas
                 $normalize = fn($string) => strtolower(
                     preg_replace('/[-\s]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $string))
                 );
@@ -75,7 +68,6 @@ class MoloniService
                 }
 
                 if (!empty($suppliers)) {
-                    // Se não encontrar match "quase exato", devolve o primeiro
                     return $suppliers[0];
                 }
             } catch (\Exception $e) {
@@ -85,6 +77,7 @@ class MoloniService
 
         return null;
     }
+
 
     public function findProductByReference(string $reference): ?array
     {

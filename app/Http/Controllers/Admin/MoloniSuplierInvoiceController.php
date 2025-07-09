@@ -291,26 +291,14 @@ class MoloniSuplierInvoiceController extends Controller
         $moloni = new MoloniService();
 
         // Procurar fornecedor na Moloni, primeiro pelo NIF, depois pelo nome
-        $supplier = $moloni->findSupplier(
-            $json['supplier']['NIF'] ?? null,           // ← correto: passa o NIF como string
-            $json['supplier']['name'] ?? null           // ← correto: passa o nome como string
-        );
+        $name = $json['supplier']['name'] ?? null;
+        $nif = $json['supplier']['NIF'] ?? '999999990';
+
+        $supplier = $moloni->findSupplier($name);
 
         if (!$supplier) {
-            return back()->withErrors('Fornecedor não existe na Moloni (NIF: ' . ($json['supplier']['NIF'] ?? 'desconhecido') . ').');
+            $supplier = $moloni->createSupplier($name, $nif);
         }
-
-        dd([
-            'vat' => $vat,
-            'name' => $name
-        ]);
-
-        $supplier = $moloni->findSupplier($vat, $name);
-
-        if (!$supplier) {
-            return back()->withErrors('Fornecedor não encontrado na Moloni: ' . ($supplierNif ?: $supplierName));
-        }
-
 
         // 2) Montar os items
         $items = [];
@@ -372,7 +360,7 @@ class MoloniSuplierInvoiceController extends Controller
                     'content' => [
                         [
                             'type' => 'text',
-                            'text' => 'Analisa esta imagem de fatura e responde apenas com JSON puro (sem texto explicativo) nos campos: invoice_date, invoice_number, supplier (nome e NIF), items, totals, taxes (opcional) e payment (opcional). NÃO escrevas mais nada além do JSON.'
+                            'text' => 'Analisa esta imagem de fatura de fornecedor e responde exclusivamente com um objeto JSON (sem qualquer texto explicativo). O JSON deve conter os seguintes campos: invoice_date, invoice_number, supplier (com name e nif), buyer (com name e nif), items, totals, taxes (opcional) e payment (opcional). O fornecedor está geralmente à esquerda e o comprador à direita — mas tem atenção: em muitos casos o NIF à esquerda pertence ao comprador (neste caso, 508263069). Por isso, se encontrares este NIF (508263069), considera que é o comprador (buyer). Se não conseguires identificar com clareza o NIF do fornecedor, define o campo supplier.nif como 999999990. Extrai corretamente os produtos, com os campos: reference, description, brand, quantity, unit_price, vat e total. Nunca preenchas campos com valores vazios ou a zero, a não ser que essa informação não exista. Se não conseguires extrair um item completo, omite-o. O campo totals deve conter subtotal, tax, discount (se aplicável) e total, com os valores reais da fatura. Nunca preenchas estes campos com zeros se os valores puderem ser calculados ou extraídos. Tem especial atenção à leitura correta de dígitos em campos numéricos como o NIF — evita confundir o número 0 com o 6 ou outros. Se o NIF tiver 9 dígitos e não for válido, revê a imagem com mais cuidado antes de devolver. Não escrevas absolutamente mais nada além do JSON.'
                         ],
                         [
                             'type' => 'image_url',
@@ -382,6 +370,7 @@ class MoloniSuplierInvoiceController extends Controller
                 ],
             ],
         ]);
+
 
         $content = $response->choices[0]->message->content ?? '{}';
 

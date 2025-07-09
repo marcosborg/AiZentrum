@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class MoloniTokenService
 {
@@ -18,12 +19,13 @@ class MoloniTokenService
     {
         $tokens = $this->getTokens();
 
-        if (!$tokens || now()->greaterThan($tokens['expires_at'])) {
+        if (!$tokens || Carbon::now()->greaterThan(Carbon::parse($tokens['expires_at']))) {
             return $this->refreshOrAuthenticate();
         }
 
         return $tokens['access_token'];
     }
+
 
     private function getTokens(): ?array
     {
