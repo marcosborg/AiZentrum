@@ -39,16 +39,26 @@
                 @endif
                 <span class="help-block">{{ trans('cruds.moloniSuplierInvoice.fields.category_helper') }}</span>
             </div>
-            <div class="form-group">
-                <label class="required" for="photo">{{ trans('cruds.moloniSuplierInvoice.fields.photo') }}</label>
-                <div class="needsclick dropzone {{ $errors->has('photo') ? 'is-invalid' : '' }}" id="photo-dropzone">
-                </div>
-                @if($errors->has('photo'))
-                    <div class="invalid-feedback">
-                        {{ $errors->first('photo') }}
+            <div class="row">
+                <div class="col-md-9">
+                    <div class="form-group">
+                        <label class="required" for="photo">{{ trans('cruds.moloniSuplierInvoice.fields.photo') }}</label>
+                        <div class="needsclick dropzone {{ $errors->has('photo') ? 'is-invalid' : '' }}" id="photo-dropzone">
+                        </div>
+                        @if($errors->has('photo'))
+                            <div class="invalid-feedback">
+                                {{ $errors->first('photo') }}
+                            </div>
+                        @endif
+                        <span class="help-block">{{ trans('cruds.moloniSuplierInvoice.fields.photo_helper') }}</span>
                     </div>
-                @endif
-                <span class="help-block">{{ trans('cruds.moloniSuplierInvoice.fields.photo_helper') }}</span>
+                </div>
+                <div class="col-md-3">
+                    <!-- Trigger da imagem -->
+                    @if($moloniSuplierInvoice->photo)
+                        <img src="{{ $moloniSuplierInvoice->photo->getUrl() }}" class="img-thumbnail" style="cursor:pointer;" data-toggle="modal" data-target="#imageModal">
+                    @endif
+                </div>
             </div>
             <div class="form-group">
                 <label for="data">{{ trans('cruds.moloniSuplierInvoice.fields.data') }}</label>
@@ -88,6 +98,16 @@
     </div>
 </div>
 
+<!-- Modal de visualização da imagem -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-body p-0">
+        <img src="{{ $moloniSuplierInvoice->photo->getUrl() }}" class="img-fluid w-100" alt="Fatura">
+      </div>
+    </div>
+  </div>
+</div>
 
 
 @endsection
