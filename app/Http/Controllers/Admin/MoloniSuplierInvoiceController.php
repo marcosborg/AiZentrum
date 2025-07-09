@@ -15,7 +15,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 use OpenAI\Laravel\Facades\OpenAI;
-use App\Services\MoloniService;
+use App\Services\MoloniLaravelService;
 
 class MoloniSuplierInvoiceController extends Controller
 {
@@ -280,7 +280,7 @@ class MoloniSuplierInvoiceController extends Controller
         return (float) str_replace(',', '.', str_replace(' ', '', $number));
     }
 
-    public function launchToMoloni(MoloniSuplierInvoice $moloniSuplierInvoice)
+    public function launchToMoloni(MoloniSuplierInvoice $moloniSuplierInvoice, MoloniLaravelService $moloniService)
     {
         $json = json_decode($moloniSuplierInvoice->data, true);
 
@@ -288,66 +288,30 @@ class MoloniSuplierInvoiceController extends Controller
             return back()->withErrors('O JSON da fatura está vazio ou inválido.');
         }
 
-        $moloni = new MoloniService();
+        //SUPLIER
 
-        // Procurar fornecedor na Moloni, primeiro pelo NIF, depois pelo nome
-        $name = $json['supplier']['name'] ?? null;
-        $nif = $json['supplier']['NIF'] ?? '999999990';
-
-        $supplier = $moloni->findSupplier($name);
-
-        if (!$supplier) {
-            $supplier = $moloni->createSupplier($name, $nif);
-        }
-
-        // 2) Montar os items
         $items = [];
         foreach ($json['items'] as $item) {
-            $product = $moloni->findProductByReference($item['reference']);
-            if (!$product) {
+            $products = $moloni->products()->getByReference([
+                'company_id' => config('services.moloni.company_id'),
+                'reference' => $item['reference']
+            ]);
+
+            if (empty($products)) {
                 return back()->withErrors("Artigo não existe na Moloni: {$item['reference']}");
             }
 
-            // Opcional: atualizar stock
-            // $moloni->updateProductStock($product['product_id'], nova quantidade);
+            $product = $products[0];
 
             $items[] = [
                 'product_id' => $product['product_id'],
                 'name' => $item['description'],
                 'qty' => $this->parseEuroNumber($item['quantity']),
                 'price' => $this->parseEuroNumber($item['unit_price']),
-                'discount' => $this->parseEuroNumber($item['discount']),
-                'exemption_reason' => '', // se precisares
+                'discount' => $this->parseEuroNumber($item['discount'] ?? 0),
             ];
         }
 
-        // 3) Montar payload do purchase
-        $payload = [
-            'company_id' => config('services.moloni.company_id'),
-            'date' => $json['invoice_date'],
-            'expiration_date' => $json['invoice_date'],
-            'document_set_id' => config('services.moloni.document_set_id'),
-            'entity_id' => $supplier['entity_id'],
-            'our_reference' => $json['invoice_number'],
-            'items' => $items,
-            'notes' => 'Fatura inserida automaticamente a partir de análise de imagem.',
-        ];
-
-        // 4) Criar fatura na Moloni
-        try {
-            $response = $moloni->createPurchase($payload);
-        } catch (\Exception $e) {
-            return back()->withErrors('Erro ao lançar fatura na Moloni: ' . $e->getMessage());
-        }
-
-        // 5) Atualizar registo com resposta da Moloni
-        $moloniSuplierInvoice->update([
-            'handled' => true,
-            'moloni_response' => json_encode($response),
-        ]);
-
-        return redirect()->route('admin.moloni-suplier-invoices.index')
-            ->with('success', 'Fatura lançada com sucesso na Moloni!');
     }
 
     private function analyzeInvoiceImage(string $imageUrl): array

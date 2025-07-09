@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Services;
+
+use Geovanefss\LaravelApiMoloni\Moloni;
+
+class MoloniLaravelService
+{
+    protected Moloni $client;
+
+    public function __construct()
+    {
+        $this->client = new Moloni([
+            'grant_type' => env('MOLONI_GRANT_TYPE', 'password'),
+            'client_id' => env('MOLONI_CLIENT_ID'),
+            'client_secret' => env('MOLONI_CLIENT_SECRET'),
+            'username' => env('MOLONI_USERNAME'),
+            'password' => env('MOLONI_PASSWORD'),
+        ]);
+    }
+
+    public function getClient(): Moloni
+    {
+        return $this->client;
+    }
+}

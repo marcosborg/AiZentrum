@@ -856,6 +856,54 @@
             "install-path": "../fruitcake/php-cors"
         },
         {
+            "name": "geovanefss/laravel-api-moloni",
+            "version": "v1.1.3",
+            "version_normalized": "1.1.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/GeovaneF55/laravel-api-moloni.git",
+                "reference": "f9aac7cb22612977d70b7e15d316960d0a4f805e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/GeovaneF55/laravel-api-moloni/zipball/f9aac7cb22612977d70b7e15d316960d0a4f805e",
+                "reference": "f9aac7cb22612977d70b7e15d316960d0a4f805e",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^7.0",
+                "php": ">=7.4",
+                "vlucas/phpdotenv": "^5.6"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.0"
+            },
+            "time": "2024-10-14T12:25:56+00:00",
+            "type": "library",
+            "installation-source": "dist",
+            "autoload": {
+                "psr-4": {
+                    "Geovanefss\\LaravelApiMoloni\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "GeovaneF55",
+                    "email": "geovanefss@gmail.com"
+                }
+            ],
+            "description": "A PHP package for interacting with Moloni APIs",
+            "support": {
+                "issues": "https://github.com/GeovaneF55/laravel-api-moloni/issues",
+                "source": "https://github.com/GeovaneF55/laravel-api-moloni/tree/v1.1.3"
+            },
+            "install-path": "../geovanefss/laravel-api-moloni"
+        },
+        {
             "name": "graham-campbell/result-type",
             "version": "v1.1.2",
             "version_normalized": "1.1.2.0",
