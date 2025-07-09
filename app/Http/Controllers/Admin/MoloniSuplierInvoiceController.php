@@ -15,7 +15,6 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 use OpenAI\Laravel\Facades\OpenAI;
-use App\Services\MoloniLaravelService;
 
 class MoloniSuplierInvoiceController extends Controller
 {
@@ -280,37 +279,10 @@ class MoloniSuplierInvoiceController extends Controller
         return (float) str_replace(',', '.', str_replace(' ', '', $number));
     }
 
-    public function launchToMoloni(MoloniSuplierInvoice $moloniSuplierInvoice, MoloniLaravelService $moloniService)
+    public function launchToMoloni($moloni_suplier_invoice_id)
     {
-        $json = json_decode($moloniSuplierInvoice->data, true);
-
-        if (!$json) {
-            return back()->withErrors('O JSON da fatura está vazio ou inválido.');
-        }
-
-        //SUPLIER
-
-        $items = [];
-        foreach ($json['items'] as $item) {
-            $products = $moloni->products()->getByReference([
-                'company_id' => config('services.moloni.company_id'),
-                'reference' => $item['reference']
-            ]);
-
-            if (empty($products)) {
-                return back()->withErrors("Artigo não existe na Moloni: {$item['reference']}");
-            }
-
-            $product = $products[0];
-
-            $items[] = [
-                'product_id' => $product['product_id'],
-                'name' => $item['description'],
-                'qty' => $this->parseEuroNumber($item['quantity']),
-                'price' => $this->parseEuroNumber($item['unit_price']),
-                'discount' => $this->parseEuroNumber($item['discount'] ?? 0),
-            ];
-        }
+        
+        
 
     }
 

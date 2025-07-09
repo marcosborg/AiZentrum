@@ -89,12 +89,9 @@
                 </button>
             </div>
         </form>
-        <form action="{{ route('admin.moloni-suplier-invoices.launch', $moloniSuplierInvoice) }}" method="POST" onsubmit="return confirm('Tens a certeza que queres lançar esta fatura no Moloni?');">
-                @csrf
-                <button class="btn btn-success" type="submit">
-                    <i class="fas fa-paper-plane"></i> Lançar no Moloni
-                </button>
-            </form>
+        <a href="{{ route('admin.moloni-suplier-invoices.launch', [$moloniSuplierInvoice->id]) }}" class="btn btn-success">
+            <i class="fas fa-paper-plane"></i> Lançar no Moloni
+        </a>
     </div>
 </div>
 

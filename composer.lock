@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e53644ab1a255388f0908627a633a97b",
+    "content-hash": "af48d64c438d30adc7aa39b08f26f4e7",
     "packages": [
         {
             "name": "brick/math",
@@ -690,51 +690,6 @@
                 }
             ],
             "time": "2023-10-12T05:21:21+00:00"
-        },
-        {
-            "name": "geovanefss/laravel-api-moloni",
-            "version": "v1.1.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/GeovaneF55/laravel-api-moloni.git",
-                "reference": "f9aac7cb22612977d70b7e15d316960d0a4f805e"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/GeovaneF55/laravel-api-moloni/zipball/f9aac7cb22612977d70b7e15d316960d0a4f805e",
-                "reference": "f9aac7cb22612977d70b7e15d316960d0a4f805e",
-                "shasum": ""
-            },
-            "require": {
-                "guzzlehttp/guzzle": "^7.0",
-                "php": ">=7.4",
-                "vlucas/phpdotenv": "^5.6"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^9.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Geovanefss\\LaravelApiMoloni\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "GeovaneF55",
-                    "email": "geovanefss@gmail.com"
-                }
-            ],
-            "description": "A PHP package for interacting with Moloni APIs",
-            "support": {
-                "issues": "https://github.com/GeovaneF55/laravel-api-moloni/issues",
-                "source": "https://github.com/GeovaneF55/laravel-api-moloni/tree/v1.1.3"
-            },
-            "time": "2024-10-14T12:25:56+00:00"
         },
         {
             "name": "graham-campbell/result-type",
