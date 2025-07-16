@@ -104,7 +104,6 @@ class ComposerStaticInitfbdea7bd0c72db7b803b8be4de6c88c4
             'Symfony\\Component\\CssSelector\\' => 30,
             'Symfony\\Component\\Console\\' => 26,
             'Spatie\\TemporaryDirectory\\' => 26,
-            'Spatie\\PdfToImage\\' => 18,
             'Spatie\\MediaLibrary\\' => 20,
             'Spatie\\LaravelIgnition\\' => 23,
             'Spatie\\Image\\' => 13,
@@ -377,10 +376,6 @@ class ComposerStaticInitfbdea7bd0c72db7b803b8be4de6c88c4
         'Spatie\\TemporaryDirectory\\' => 
         array (
             0 => __DIR__ . '/..' . '/spatie/temporary-directory/src',
-        ),
-        'Spatie\\PdfToImage\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/spatie/pdf-to-image/src',
         ),
         'Spatie\\MediaLibrary\\' => 
         array (
@@ -6497,10 +6492,6 @@ class ComposerStaticInitfbdea7bd0c72db7b803b8be4de6c88c4
         'Spatie\\MediaLibrary\\Support\\UrlGenerator\\DefaultUrlGenerator' => __DIR__ . '/..' . '/spatie/laravel-medialibrary/src/Support/UrlGenerator/DefaultUrlGenerator.php',
         'Spatie\\MediaLibrary\\Support\\UrlGenerator\\UrlGenerator' => __DIR__ . '/..' . '/spatie/laravel-medialibrary/src/Support/UrlGenerator/UrlGenerator.php',
         'Spatie\\MediaLibrary\\Support\\UrlGenerator\\UrlGeneratorFactory' => __DIR__ . '/..' . '/spatie/laravel-medialibrary/src/Support/UrlGenerator/UrlGeneratorFactory.php',
-        'Spatie\\PdfToImage\\Exceptions\\InvalidFormat' => __DIR__ . '/..' . '/spatie/pdf-to-image/src/Exceptions/InvalidFormat.php',
-        'Spatie\\PdfToImage\\Exceptions\\PageDoesNotExist' => __DIR__ . '/..' . '/spatie/pdf-to-image/src/Exceptions/PageDoesNotExist.php',
-        'Spatie\\PdfToImage\\Exceptions\\PdfDoesNotExist' => __DIR__ . '/..' . '/spatie/pdf-to-image/src/Exceptions/PdfDoesNotExist.php',
-        'Spatie\\PdfToImage\\Pdf' => __DIR__ . '/..' . '/spatie/pdf-to-image/src/Pdf.php',
         'Spatie\\TemporaryDirectory\\Exceptions\\InvalidDirectoryName' => __DIR__ . '/..' . '/spatie/temporary-directory/src/Exceptions/InvalidDirectoryName.php',
         'Spatie\\TemporaryDirectory\\Exceptions\\PathAlreadyExists' => __DIR__ . '/..' . '/spatie/temporary-directory/src/Exceptions/PathAlreadyExists.php',
         'Spatie\\TemporaryDirectory\\TemporaryDirectory' => __DIR__ . '/..' . '/spatie/temporary-directory/src/TemporaryDirectory.php',
