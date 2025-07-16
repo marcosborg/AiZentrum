@@ -135,7 +135,7 @@ class MoloniSuplierInvoiceController extends Controller
             $cloudconvert->tasks()->upload($uploadTask, fopen($localFilePath, 'r'));
 
             // Esperar o job terminar
-            $job = $cloudconvert->jobs()->wait($job->getId());
+            $job = $cloudconvert->jobs()->wait($job);
 
             // Obter URL da imagem convertida
             $exportTask = $job->getTasks()->whereName('export-jpg')[0];
