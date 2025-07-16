@@ -69,4 +69,59 @@ class MoloniService
 
         return $response->json();
     }
+
+    public function getCountries(): array
+    {
+        $token = $this->refreshAccessToken();
+
+        $response = Http::asForm()->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->post("{$this->baseUrl}/countries/getAll/?access_token={$token}", [
+            'company_id' => config('services.moloni.company_id'),
+        ]);
+
+        if (!$response->ok()) {
+            throw new \Exception('Erro ao buscar países: ' . $response->body());
+        }
+
+        return $response->json();
+    }
+
+    public function createSupplier(array $data): array
+    {
+        $token = $this->refreshAccessToken();
+
+        $payload = [
+            'company_id' => config('services.moloni.company_id'),
+            'vat' => $data['vat'] ?? '',
+            'number' => $data['number'] ?? '',
+            'name' => $data['name'],
+            'language_id' => 1,
+            'address' => $data['address'] ?? '',
+            'zip_code' => $data['zip_code'] ?? '',
+            'city' => $data['city'] ?? '',
+            'country_id' => $data['country_id'],
+            'maturity_date_id' => 70679,
+            'qty_copies_document' => 3,
+            'payment_method_id' => 69611,
+            'discount' => 0,
+            'credit_limit' => 0,
+            'delivery_method_id' => 1,
+        ];
+
+        $response = Http::asForm()->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->post("{$this->baseUrl}/suppliers/insert/?access_token={$token}", $payload);
+
+        $data = $response->json();
+
+        if (!$response->ok() || !isset($data['valid']) || empty($data['supplier_id'])) {
+            throw new \Exception('Fornecedor criado, mas não foi possível confirmar os dados: ' . json_encode($data));
+        }
+
+        return [
+            'supplier_id' => $data['supplier_id'],
+            'name' => $payload['name'], // devolvemos manualmente o nome que enviámos
+        ];
+    }
 }

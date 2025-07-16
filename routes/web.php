@@ -137,6 +137,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::get('moloni-suplier-invoices/invoice/{moloni_suplier_invoice_id}', [MoloniSuplierInvoiceController::class, 'launchToMoloni'])
         ->name('moloni-suplier-invoices.launch');
     Route::get('moloni/suppliers', [MoloniSuplierInvoiceController::class, 'getSuppliersByName'])->name('moloni.suppliers');
+    Route::post('moloni/create-supplier', [MoloniSuplierInvoiceController::class, 'createSupplier'])->name('moloni.suppliers.create');
 
 
     Route::delete('moloni-suplier-invoices/destroy', 'MoloniSuplierInvoiceController@massDestroy')->name('moloni-suplier-invoices.massDestroy');

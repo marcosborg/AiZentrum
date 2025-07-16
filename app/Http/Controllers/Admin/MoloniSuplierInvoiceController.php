@@ -330,11 +330,20 @@ class MoloniSuplierInvoiceController extends Controller
 
         $supplier = null;
         if ($supplierName) {
-            $result = $moloni->getSuppliersByName($supplierName);
-            $supplier = $result[0] ?? null;
+            $results = $moloni->getSuppliersByName($supplierName);
+
+            // Garante que tens ao menos um
+            if (count($results) > 0) {
+                $supplier = [
+                    'supplier_id' => $results[0]['supplier_id'],
+                    'name' => $results[0]['name']
+                ];
+            }
         }
 
-        return view('admin.moloniSuplierInvoices.launch_to_moloni', compact('moloni_suplier_invoice', 'data', 'supplier'));
+        $countries = app(MoloniService::class)->getCountries();
+
+        return view('admin.moloniSuplierInvoices.launch_to_moloni', compact('moloni_suplier_invoice', 'data', 'supplier', 'countries'));
     }
 
     public function getSuppliersByName(Request $request, MoloniService $moloni)
@@ -348,13 +357,48 @@ class MoloniSuplierInvoiceController extends Controller
         $results = $moloni->getSuppliersByName($name);
 
         $formatted = collect($results)
-            ->filter(fn($supplier) => isset($supplier['entity_id'], $supplier['name']))
+            ->filter(fn($supplier) => isset($supplier['supplier_id'], $supplier['name']))
             ->map(fn($supplier) => [
-                'id' => $supplier['entity_id'],
+                'id' => $supplier['supplier_id'],
                 'text' => $supplier['name'],
             ])
-            ->values(); // limpa as chaves numéricas
+            ->values();
 
         return response()->json($formatted);
+    }
+
+    public function createSupplier(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'vat' => 'nullable|string',
+            'address' => 'nullable|string',
+            'zip_code' => 'nullable|string',
+            'city' => 'nullable|string',
+            'country_id' => 'required|integer',
+        ]);
+
+        // Se for Portugal (ID 1), valida NIF e código postal
+        if ((int)$validated['country_id'] === 1) {
+
+            // Validação do código postal
+            if (!empty($validated['zip_code']) && !preg_match('/^\d{4}-\d{3}$/', $validated['zip_code'])) {
+                return response()->json(['error' => 'Código postal inválido. Deve ser no formato NNNN-NNN.'], 422);
+            }
+        }
+
+        $validated['number'] = rand(100000000, 999999999); // Código interno aleatório
+
+        try {
+            $moloni = new MoloniService();
+            $supplier = $moloni->createSupplier($validated);
+
+            return response()->json([
+                'supplier_id' => $supplier['supplier_id'],
+                'name' => $supplier['name'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }
