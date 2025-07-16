@@ -137,7 +137,9 @@ class MoloniSuplierInvoiceController extends Controller
             );
 
             // Upload do PDF para a CloudConvert
-            $uploadTask = $job->getTasks()->whereName('import-my-file')->first();
+            $uploadTask = collect($job->getTasks())->filter(function ($task) {
+                return $task->getName() === 'import-my-file';
+            })->first();
             $cloudconvert->tasks()->upload($uploadTask, fopen($pdf->getPath(), 'r'));
 
             // Espera pela conclusão do job
