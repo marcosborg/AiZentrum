@@ -313,6 +313,8 @@ return [
             'id_helper'         => ' ',
             'user'              => 'User',
             'user_helper'       => ' ',
+            'file'             => 'File',
+            'file_helper'      => ' ',
             'photo'             => 'Photo',
             'photo_helper'      => ' ',
             'data'              => 'Data',

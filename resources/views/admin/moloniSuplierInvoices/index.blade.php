@@ -28,6 +28,9 @@
                         {{ trans('cruds.moloniSuplierInvoice.fields.user') }}
                     </th>
                     <th>
+                        {{ trans('cruds.moloniSuplierInvoice.fields.file') }}
+                    </th>
+                    <th>
                         {{ trans('cruds.moloniSuplierInvoice.fields.photo') }}
                     </th>
                     <th>
@@ -94,6 +97,7 @@
       { data: 'placeholder', name: 'placeholder' },
 { data: 'id', name: 'id' },
 { data: 'user_name', name: 'user.name' },
+{ data: 'file', name: 'file', sortable: false, searchable: false },
 { data: 'photo', name: 'photo', sortable: false, searchable: false },
 { data: 'data', name: 'data' },
 { data: 'handled', name: 'handled' },

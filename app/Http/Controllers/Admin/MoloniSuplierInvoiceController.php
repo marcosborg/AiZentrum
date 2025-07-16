@@ -54,6 +54,10 @@ class MoloniSuplierInvoiceController extends Controller
                 return $row->user ? $row->user->name : '';
             });
 
+            $table->editColumn('file', function ($row) {
+                return $row->file ? '<a href="' . $row->file->getUrl() . '" target="_blank">' . trans('global.downloadFile') . '</a>' : '';
+            });
+
             $table->editColumn('photo', function ($row) {
                 if ($photo = $row->photo) {
                     return sprintf(
@@ -72,7 +76,7 @@ class MoloniSuplierInvoiceController extends Controller
                 return '<input type="checkbox" disabled ' . ($row->handled ? 'checked' : null) . '>';
             });
 
-            $table->rawColumns(['actions', 'placeholder', 'user', 'photo', 'handled']);
+            $table->rawColumns(['actions', 'placeholder', 'user', 'file', 'photo', 'handled']);
 
             return $table->make(true);
         }
@@ -92,6 +96,10 @@ class MoloniSuplierInvoiceController extends Controller
     public function store(StoreMoloniSuplierInvoiceRequest $request)
     {
         $moloniSuplierInvoice = MoloniSuplierInvoice::create($request->all());
+
+        if ($request->input('file', false)) {
+            $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('file'))))->toMediaCollection('file');
+        }
 
         if ($request->input('photo', false)) {
             $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('photo'))))->toMediaCollection('photo');
@@ -131,6 +139,17 @@ class MoloniSuplierInvoiceController extends Controller
     public function update(UpdateMoloniSuplierInvoiceRequest $request, MoloniSuplierInvoice $moloniSuplierInvoice)
     {
         $moloniSuplierInvoice->update($request->all());
+
+        if ($request->input('file', false)) {
+            if (! $moloniSuplierInvoice->file || $request->input('file') !== $moloniSuplierInvoice->file->file_name) {
+                if ($moloniSuplierInvoice->file) {
+                    $moloniSuplierInvoice->file->delete();
+                }
+                $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('file'))))->toMediaCollection('file');
+            }
+        } elseif ($moloniSuplierInvoice->file) {
+            $moloniSuplierInvoice->file->delete();
+        }
 
         if ($request->input('photo', false)) {
             if (! $moloniSuplierInvoice->photo || $request->input('photo') !== $moloniSuplierInvoice->photo->file_name) {
