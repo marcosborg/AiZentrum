@@ -19,8 +19,8 @@ use App\Services\MoloniService;
 use CloudConvert\CloudConvert;
 use CloudConvert\Resources\JobsResource;
 use CloudConvert\Resources\TasksResource;
-use CloudConvert\Models\Job;
-use CloudConvert\Models\Task;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class MoloniSuplierInvoiceController extends Controller
 {
@@ -102,66 +102,78 @@ class MoloniSuplierInvoiceController extends Controller
     {
         $moloniSuplierInvoice = MoloniSuplierInvoice::create($request->all());
 
-        // Upload do PDF
         if ($request->input('file', false)) {
-            $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('file'))))->toMediaCollection('file');
-
-            // Iniciar CloudConvert
-            $cloudconvert = new CloudConvert([
-                'api_key' => env('CLOUDCONVERT_API_KEY'),
-                'sandbox' => false, // true se estiveres a testar
-            ]);
-
-            // Obter caminho do ficheiro PDF
-            $media = $moloniSuplierInvoice->getFirstMedia('file');
-            $localFilePath = $media->getPath();
-
-            // Criar job para converter para JPG
-            $job = (new Job())
-                ->addTask((new Task('import/upload', 'upload-pdf')))
-                ->addTask((new Task('convert', 'convert-to-jpg'))
-                        ->set('input', 'upload-pdf')
-                        ->set('output_format', 'jpg')
-                        ->set('pages', '1') // só a 1ª página (podes mudar para "all")
-                )
-                ->addTask((new Task('export/url', 'export-jpg'))
-                        ->set('input', 'convert-to-jpg')
-                );
-
-            $job = $cloudconvert->jobs()->create($job);
-
-            // Upload do PDF
-            $uploadTask = $job->getTasks()->whereName('upload-pdf')[0];
-            $cloudconvert->tasks()->upload($uploadTask, fopen($localFilePath, 'r'));
-
-            // Esperar o job terminar
-            $job = $cloudconvert->jobs()->wait($job);
-
-            // Obter URL da imagem convertida
-            $exportTask = $job->getTasks()->whereName('export-jpg')[0];
-            $imageUrl = $exportTask->getResult()->files[0]->url ?? null;
-
-            if ($imageUrl) {
-                // Fazer download e adicionar à collection 'photo'
-                $photoPath = storage_path('app/temp_invoice.jpg');
-                file_put_contents($photoPath, file_get_contents($imageUrl));
-
-                $moloniSuplierInvoice->addMedia($photoPath)->toMediaCollection('photo');
-
-                // Apagar o ficheiro temporário
-                unlink($photoPath);
-
-                // Analisar com GPT
-                $json = $this->analyzeInvoiceImage($imageUrl);
-
-                // Guardar JSON
-                $moloniSuplierInvoice->update(['data' => json_encode($json)]);
-            }
+            $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('file'))))
+                ->toMediaCollection('file');
         }
 
-        // ck-media
-        if ($media = $request->input('ck-media', false)) {
-            Media::whereIn('id', $media)->update(['model_id' => $moloniSuplierInvoice->id]);
+        // Converte o PDF em imagem (JPG) usando CloudConvert
+        $cloudconvert = new CloudConvert(['api_key' => config('services.cloudconvert.api_key')]);
+
+        $filePath = $moloniSuplierInvoice->file->getPath();
+
+        $uploadTask = (new Task())
+            ->setName('upload-my-file')
+            ->setOperation('import/upload');
+
+        $convertTask = (new Task())
+            ->setName('convert-my-file')
+            ->setOperation('convert')
+            ->setInput('upload-my-file')
+            ->setInputFormat('pdf')
+            ->setOutputFormat('jpg')
+            ->setEngine('office')
+            ->setOutput('one')
+            ->setSomeOptions([
+                'page_range' => '1',
+                'zoom' => 1
+            ]);
+
+        $exportTask = (new Task())
+            ->setName('export-my-file')
+            ->setOperation('export/url')
+            ->setInput('convert-my-file');
+
+        $job = (new Job())
+            ->addTask($uploadTask)
+            ->addTask($convertTask)
+            ->addTask($exportTask);
+
+        $job = $cloudconvert->jobs()->create($job);
+
+        $uploadTask = $job->getTasks()->whereName('upload-my-file')[0];
+
+        $cloudconvert->tasks()->upload($uploadTask, fopen($filePath, 'r'));
+
+        // Esperar job terminar
+        $job = $cloudconvert->jobs()->wait($job->getId());
+
+        $exportTask = $job->getTasks()->whereName('export-my-file')[0];
+        $imageUrl = $exportTask->getResult()->files[0]->url ?? null;
+
+        if ($imageUrl) {
+            $tmpImage = storage_path('tmp/uploads/' . Str::uuid()->toString() . '.jpg');
+
+            try {
+                $imageContents = file_get_contents($imageUrl);
+            } catch (\Exception $e) {
+                // Fallback usando Guzzle
+                $response = Http::get($imageUrl);
+                $imageContents = $response->body();
+            }
+
+            file_put_contents($tmpImage, $imageContents);
+
+            $moloniSuplierInvoice->addMedia($tmpImage)->toMediaCollection('photo');
+            unlink($tmpImage); // limpeza
+        }
+
+        // Analisar imagem
+        $photo = $moloniSuplierInvoice->photo;
+        if ($photo) {
+            $imageUrl = $photo->getUrl();
+            $json = $this->analyzeInvoiceImage($imageUrl);
+            $moloniSuplierInvoice->update(['data' => json_encode($json)]);
         }
 
         return redirect()->route('admin.moloni-suplier-invoices.edit', [$moloniSuplierInvoice->id]);
