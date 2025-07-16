@@ -17,10 +17,9 @@ use Yajra\DataTables\Facades\DataTables;
 use OpenAI\Laravel\Facades\OpenAI;
 use App\Services\MoloniService;
 use CloudConvert\CloudConvert;
-use CloudConvert\Resources\JobsResource;
-use CloudConvert\Resources\TasksResource;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
+use CloudConvert\Models\Job;
+use CloudConvert\Models\Task;
 
 class MoloniSuplierInvoiceController extends Controller
 {
