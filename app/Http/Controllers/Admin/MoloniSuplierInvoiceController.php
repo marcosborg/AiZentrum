@@ -139,7 +139,7 @@ class MoloniSuplierInvoiceController extends Controller
 
             // Obter URL da imagem convertida
             $exportTask = $job->getTasks()->whereName('export-jpg')[0];
-            $imageUrl = $exportTask->getResult()['files'][0]['url'] ?? null;
+            $imageUrl = $exportTask->getResult()->files[0]->url ?? null;
 
             if ($imageUrl) {
                 // Fazer download e adicionar à collection 'photo'
