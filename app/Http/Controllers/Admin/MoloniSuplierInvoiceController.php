@@ -16,10 +16,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 use OpenAI\Laravel\Facades\OpenAI;
 use App\Services\MoloniService;
-use CloudConvert\CloudConvert;
-use Illuminate\Support\Facades\Http;
-use CloudConvert\Models\Job;
-use CloudConvert\Models\Task;
 
 class MoloniSuplierInvoiceController extends Controller
 {
@@ -57,11 +53,6 @@ class MoloniSuplierInvoiceController extends Controller
             $table->addColumn('user_name', function ($row) {
                 return $row->user ? $row->user->name : '';
             });
-
-            $table->editColumn('file', function ($row) {
-                return $row->file ? '<a href="' . $row->file->getUrl() . '" target="_blank">' . trans('global.downloadFile') . '</a>' : '';
-            });
-
             $table->editColumn('photo', function ($row) {
                 if ($photo = $row->photo) {
                     return sprintf(
@@ -80,7 +71,7 @@ class MoloniSuplierInvoiceController extends Controller
                 return '<input type="checkbox" disabled ' . ($row->handled ? 'checked' : null) . '>';
             });
 
-            $table->rawColumns(['actions', 'placeholder', 'user', 'file', 'photo', 'handled']);
+            $table->rawColumns(['actions', 'placeholder', 'user', 'photo', 'handled']);
 
             return $table->make(true);
         }
@@ -99,100 +90,28 @@ class MoloniSuplierInvoiceController extends Controller
 
     public function store(StoreMoloniSuplierInvoiceRequest $request)
     {
-        // 1. Criar registo
         $moloniSuplierInvoice = MoloniSuplierInvoice::create($request->all());
 
-        // 2. Guardar o PDF na coleção 'file'
-        if ($request->input('file', false)) {
-            $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('file'))))
-                ->toMediaCollection('file');
+        if ($request->input('photo', false)) {
+            $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('photo'))))->toMediaCollection('photo');
         }
 
-        // 3. Obter o ficheiro PDF
-        $pdf = $moloniSuplierInvoice->file;
-        if (!$pdf) {
-            throw new \Exception('Ficheiro PDF não encontrado.');
+        if ($media = $request->input('ck-media', false)) {
+            Media::whereIn('id', $media)->update(['model_id' => $moloniSuplierInvoice->id]);
         }
 
-        // 4. Inicializar CloudConvert
-        $cloudconvert = new CloudConvert([
-            'api_key' => config('services.cloudconvert.api_key'),
-            'sandbox' => false,
-        ]);
+        // Obter a imagem da fatura
+        $photo = $moloniSuplierInvoice->photo;
+        if ($photo) {
+            // Gerar URL pública
+            $imageUrl = $photo->getUrl();
 
-        // 5. Criar o job de conversão
-        $job = $cloudconvert->jobs()->create(
-            (new Job())
-                ->addTask(
-                    (new Task('import/upload', 'import-my-file'))
-                )
-                ->addTask(
-                    (new Task('convert', 'convert-my-file'))
-                        ->set('input', 'import-my-file')
-                        ->set('input_format', 'pdf')
-                        ->set('output_format', 'jpg')
-                        ->set('page_range', '1')
-                        ->set('engine', 'poppler')
-                        ->set('output_quality', 70)
-                )
-                ->addTask(
-                    (new Task('export/url', 'export-my-file'))
-                        ->set('input', 'convert-my-file')
-                )
-        );
+            // Analisar a imagem com GPT-4o visão
+            $json = $this->analyzeInvoiceImage($imageUrl);
 
-        // 6. Encontrar a task de upload
-        $uploadTask = null;
-        foreach ($job->getTasks() as $task) {
-            if ($task->getName() === 'import-my-file') {
-                $uploadTask = $task;
-                break;
-            }
+            // Guardar o JSON no campo data
+            $moloniSuplierInvoice->update(['data' => json_encode($json)]);
         }
-
-        if (!$uploadTask) {
-            throw new \Exception('Task de upload "import-my-file" não encontrada.');
-        }
-
-        // 7. Fazer upload do PDF
-        $cloudconvert->tasks()->upload($uploadTask, fopen($pdf->getPath(), 'r'));
-
-        // 8. Esperar pela conclusão do job
-        $job = $cloudconvert->jobs()->wait($job); // em vez de $job->getId()
-
-        // 9. Obter o URL da imagem gerada
-        $exportTask = null;
-        foreach ($job->getTasks() as $task) {
-            if ($task->getName() === 'export-my-file') {
-                $exportTask = $task;
-                break;
-            }
-        }
-
-        $imageUrl = $exportTask->getResult()['files'][0]['url'] ?? null;
-
-        if (!$imageUrl) {
-            throw new \Exception('Erro ao obter a imagem convertida.');
-        }
-
-        // 10. Fazer download da imagem e guardar na coleção 'photo'
-        $photoPath = storage_path('app/temp_invoice.jpg');
-        $response = Http::get($imageUrl);
-
-        if (!$response->successful()) {
-            throw new \Exception('Erro ao fazer download da imagem da fatura.');
-        }
-
-        file_put_contents($photoPath, $response->body());
-
-        $moloniSuplierInvoice->addMedia($photoPath)->toMediaCollection('photo');
-
-        // 11. Analisar a imagem com GPT-4o
-        $imageUrlLocal = $moloniSuplierInvoice->photo->getUrl();
-        $json = $this->analyzeInvoiceImage($imageUrlLocal);
-
-        // 12. Guardar os dados extraídos no campo "data"
-        $moloniSuplierInvoice->update(['data' => json_encode($json)]);
 
         return redirect()->route('admin.moloni-suplier-invoices.edit', [$moloniSuplierInvoice->id]);
     }
@@ -211,17 +130,6 @@ class MoloniSuplierInvoiceController extends Controller
     public function update(UpdateMoloniSuplierInvoiceRequest $request, MoloniSuplierInvoice $moloniSuplierInvoice)
     {
         $moloniSuplierInvoice->update($request->all());
-
-        if ($request->input('file', false)) {
-            if (! $moloniSuplierInvoice->file || $request->input('file') !== $moloniSuplierInvoice->file->file_name) {
-                if ($moloniSuplierInvoice->file) {
-                    $moloniSuplierInvoice->file->delete();
-                }
-                $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('file'))))->toMediaCollection('file');
-            }
-        } elseif ($moloniSuplierInvoice->file) {
-            $moloniSuplierInvoice->file->delete();
-        }
 
         if ($request->input('photo', false)) {
             if (! $moloniSuplierInvoice->photo || $request->input('photo') !== $moloniSuplierInvoice->photo->file_name) {

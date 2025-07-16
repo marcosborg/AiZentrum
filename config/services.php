@@ -37,7 +37,4 @@ return [
         'api_url' => env('MOLONI_API_URL', 'https://api.moloni.pt/v1'),
         'document_set_id' => env('MOLONI_DOCUMENT_SET_ID', '784358'),
     ],
-    'cloudconvert' => [
-        'api_key' => env('CLOUDCONVERT_API_KEY'),
-    ],
 ];
