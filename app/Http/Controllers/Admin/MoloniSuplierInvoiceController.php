@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 use OpenAI\Laravel\Facades\OpenAI;
 use App\Services\MoloniService;
+use Spatie\PdfToImage\Pdf;
 
 class MoloniSuplierInvoiceController extends Controller
 {
