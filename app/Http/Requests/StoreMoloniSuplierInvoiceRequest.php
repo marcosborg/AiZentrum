@@ -24,9 +24,6 @@ class StoreMoloniSuplierInvoiceRequest extends FormRequest
             'file' => [
                 'required',
             ],
-            'photo' => [
-                'required',
-            ],
         ];
     }
 }
