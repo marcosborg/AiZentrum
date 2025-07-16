@@ -402,16 +402,14 @@ class MoloniSuplierInvoiceController extends Controller
         }
     }
 
-    public function syncPreview(Request $request)
+    public function syncInvoice(Request $request)
     {
         $data = $request->input('data');
 
-        \Log::debug('📤 Dados recebidos para sincronização com Moloni:', $data);
-
-        // Apenas para debug por agora
+        // Apenas para debug inicial:
         return response()->json([
             'received' => $data,
-            'status' => 'ok'
+            'message' => 'Dados recebidos com sucesso!'
         ]);
     }
 }

@@ -52,6 +52,7 @@
                                 <th>Preço Unitário</th>
                                 <th>IVA (%)</th>
                                 <th>Total</th>
+                                <th>Unidade</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -70,14 +71,26 @@
                                             value="{{ $item->vat ?? '' }}" step="0.01"></td>
                                     <td><input type="number" name="items[{{ $index }}][total]" class="form-control"
                                             value="{{ $item->total }}" step="0.01"></td>
+                                    <td>
+                                        <select name="items[{{ $index }}][unit_id]" class="form-control">
+                                            <option value="86267" selected>Unidade (Uni.)</option>
+                                            <option value="86272">Horas (Hrs)</option>
+                                            <option value="86271">Litro (Lts.)</option>
+                                            <option value="86270">Metro Cúbico (m3)</option>
+                                            <option value="86268">Metro Linear (m)</option>
+                                            <option value="86269">Metro Quadrado (m2)</option>
+                                            <option value="89429">Quilograma (Kg)</option>
+                                            <option value="89466">Tonelada (Ton)</option>
+                                        </select>
+                                    </td>
                                     <td><button type="button" class="btn btn-danger btn-sm remove-row">🗑</button></td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
                     <button type="button" class="btn btn-success btn-sm my-2" id="addRow">Adicionar item</button>
-                    <button type="button" class="btn btn-primary btn-block mt-3" id="syncToMoloni">
-                        🔄 Sincronizar com Moloni
+                    <button type="button" id="syncMoloniBtn" class="btn btn-primary mt-3">
+                        Sincronizar com Moloni
                     </button>
                 </div>
             </div>
@@ -209,25 +222,32 @@
         });
     </script>
     <script>
-        $(document).on('click', '.remove-row', function() {
-            $(this).closest('tr').remove();
-        });
-    </script>
-    <script>
         let itemIndex = {{ count($data->items ?? []) }};
 
         $('#addRow').on('click', function() {
             const row = `
-                <tr>
-                    <td><input type="text" name="items[${itemIndex}][reference]" class="form-control" /></td>
-                    <td><input type="text" name="items[${itemIndex}][description]" class="form-control" /></td>
-                    <td><input type="number" name="items[${itemIndex}][quantity]" class="form-control" step="0.01" /></td>
-                    <td><input type="number" name="items[${itemIndex}][unit_price]" class="form-control" step="0.01" /></td>
-                    <td><input type="number" name="items[${itemIndex}][vat]" class="form-control" step="0.01" /></td>
-                    <td><input type="number" name="items[${itemIndex}][total]" class="form-control" step="0.01" /></td>
-                    <td><button type="button" class="btn btn-danger btn-sm remove-row">🗑</button></td>
-                </tr>
-            `;
+        <tr>
+            <td><input type="text" name="items[${itemIndex}][reference]" class="form-control" /></td>
+            <td><input type="text" name="items[${itemIndex}][description]" class="form-control" /></td>
+            <td><input type="number" name="items[${itemIndex}][quantity]" class="form-control" step="0.01" /></td>
+            <td><input type="number" name="items[${itemIndex}][unit_price]" class="form-control" step="0.01" /></td>
+            <td><input type="number" name="items[${itemIndex}][vat]" class="form-control" step="0.01" /></td>
+            <td><input type="number" name="items[${itemIndex}][total]" class="form-control" step="0.01" /></td>
+            <td>
+                <select name="items[${itemIndex}][unit_id]" class="form-control">
+                    <option value="86267" selected>Unidade (Uni.)</option>
+                    <option value="86272">Horas (Hrs)</option>
+                    <option value="86271">Litro (Lts.)</option>
+                    <option value="86270">Metro Cúbico (m3)</option>
+                    <option value="86268">Metro Linear (m)</option>
+                    <option value="86269">Metro Quadrado (m2)</option>
+                    <option value="89429">Quilograma (Kg)</option>
+                    <option value="89466">Tonelada (Ton)</option>
+                </select>
+            </td>
+            <td><button type="button" class="btn btn-danger btn-sm remove-row">🗑</button></td>
+        </tr>
+    `;
             $('#itemsTable tbody').append(row);
             itemIndex++;
         });
@@ -265,39 +285,43 @@
         });
     </script>
     <script>
-    $('#syncToMoloni').on('click', function () {
-        let data = {
-            invoice_date: $('#invoice_date').val(),
-            invoice_number: $('#invoice_number').val(),
-            supplier_id: $('#supplier_id').val(),
-            items: []
-        };
-
-        $('#itemsTable tbody tr').each(function () {
-            let row = $(this);
-            let item = {
-                reference: row.find('input[name*="[reference]"]').val(),
-                description: row.find('input[name*="[description]"]').val(),
-                quantity: parseFloat(row.find('input[name*="[quantity]"]').val()) || 0,
-                unit_price: parseFloat(row.find('input[name*="[unit_price]"]').val()) || 0,
-                vat: parseFloat(row.find('input[name*="[vat]"]').val()) || 0,
-                total: parseFloat(row.find('input[name*="[total]"]').val()) || 0,
+        $('#syncMoloniBtn').on('click', function() {
+            const invoiceData = {
+                invoice_date: $('#invoice_date').val(),
+                invoice_number: $('#invoice_number').val(),
+                supplier_id: $('#supplier_id').val(),
+                items: []
             };
-            data.items.push(item);
-        });
 
-        $.post('{{ route('admin.moloni.syncPreview') }}', {
-            _token: '{{ csrf_token() }}',
-            data: data
-        }, function (response) {
-            console.log('📦 Dados recebidos do servidor:', response);
-            alert('Dados enviados com sucesso! Verifica o console.');
-        }).fail(function (xhr) {
-            alert('Erro ao enviar dados: ' + (xhr.responseJSON?.message || xhr.statusText));
-        });
-    });
-</script>
+            $('#itemsTable tbody tr').each(function() {
+                const row = $(this);
+                invoiceData.items.push({
+                    reference: row.find('input[name*="[reference]"]').val(),
+                    description: row.find('input[name*="[description]"]').val(),
+                    quantity: row.find('input[name*="[quantity]"]').val(),
+                    unit_price: row.find('input[name*="[unit_price]"]').val(),
+                    vat: row.find('input[name*="[vat]"]').val(),
+                    total: row.find('input[name*="[total]"]').val()
+                });
+            });
 
+            $.ajax({
+                url: '{{ route('admin.moloni.syncInvoice') }}',
+                method: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    data: invoiceData
+                },
+                success: function(response) {
+                    console.log(response);
+                    alert('Dados enviados com sucesso!');
+                },
+                error: function(xhr) {
+                    alert('Erro ao sincronizar: ' + (xhr.responseJSON?.message || xhr.statusText));
+                }
+            });
+        });
+    </script>
 @endsection
 @section('styles')
     <style>
