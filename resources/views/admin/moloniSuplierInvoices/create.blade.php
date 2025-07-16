@@ -24,21 +24,6 @@
                 <span class="help-block">{{ trans('cruds.moloniSuplierInvoice.fields.user_helper') }}</span>
             </div>
             <div class="form-group">
-                <label class="required">{{ trans('cruds.moloniSuplierInvoice.fields.category') }}</label>
-                @foreach(App\Models\MoloniSuplierInvoice::CATEGORY_RADIO as $key => $label)
-                    <div class="form-check {{ $errors->has('category') ? 'is-invalid' : '' }}">
-                        <input class="form-check-input" type="radio" id="category_{{ $key }}" name="category" value="{{ $key }}" {{ old('category', '127489') === (string) $key ? 'checked' : '' }} required>
-                        <label class="form-check-label" for="category_{{ $key }}">{{ $label }}</label>
-                    </div>
-                @endforeach
-                @if($errors->has('category'))
-                    <div class="invalid-feedback">
-                        {{ $errors->first('category') }}
-                    </div>
-                @endif
-                <span class="help-block">{{ trans('cruds.moloniSuplierInvoice.fields.category_helper') }}</span>
-            </div>
-            <div class="form-group">
                 <label class="required" for="photo">{{ trans('cruds.moloniSuplierInvoice.fields.photo') }}</label>
                 <div class="needsclick dropzone {{ $errors->has('photo') ? 'is-invalid' : '' }}" id="photo-dropzone">
                 </div>

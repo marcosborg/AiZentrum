@@ -21,9 +21,6 @@ class UpdateMoloniSuplierInvoiceRequest extends FormRequest
                 'required',
                 'integer',
             ],
-            'category' => [
-                'required',
-            ],
             'photo' => [
                 'required',
             ],

@@ -15,6 +15,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 use OpenAI\Laravel\Facades\OpenAI;
+use App\Services\MoloniService;
 
 class MoloniSuplierInvoiceController extends Controller
 {
@@ -53,9 +54,6 @@ class MoloniSuplierInvoiceController extends Controller
                 return $row->user ? $row->user->name : '';
             });
 
-            $table->editColumn('category', function ($row) {
-                return $row->category ? MoloniSuplierInvoice::CATEGORY_RADIO[$row->category] : '';
-            });
             $table->editColumn('photo', function ($row) {
                 if ($photo = $row->photo) {
                     return sprintf(
@@ -154,7 +152,6 @@ class MoloniSuplierInvoiceController extends Controller
 
         return redirect()->route('admin.moloni-suplier-invoices.edit', [$moloniSuplierInvoice->id]);
     }
-
 
     public function show(MoloniSuplierInvoice $moloniSuplierInvoice)
     {
@@ -279,13 +276,6 @@ class MoloniSuplierInvoiceController extends Controller
         return (float) str_replace(',', '.', str_replace(' ', '', $number));
     }
 
-    public function launchToMoloni($moloni_suplier_invoice_id)
-    {
-        
-        
-
-    }
-
     private function analyzeInvoiceImage(string $imageUrl): array
     {
         $response = OpenAI::chat()->create([
@@ -329,5 +319,43 @@ class MoloniSuplierInvoiceController extends Controller
         }
 
         return $json;
+    }
+
+    public function launchToMoloni($moloni_suplier_invoice_id)
+    {
+        $moloni_suplier_invoice = MoloniSuplierInvoice::findOrFail($moloni_suplier_invoice_id);
+        $data = json_decode($moloni_suplier_invoice->data);
+        $supplierName = $data->supplier->name ?? null;
+
+        $moloni = new MoloniService();
+
+        $supplier = null;
+        if ($supplierName) {
+            $result = $moloni->getSuppliersByName($supplierName);
+            $supplier = $result[0] ?? null;
+        }
+
+        return view('admin.moloniSuplierInvoices.launch_to_moloni', compact('moloni_suplier_invoice', 'data', 'supplier'));
+    }
+
+    public function getSuppliersByName(Request $request, MoloniService $moloni)
+    {
+        $name = $request->get('term'); // select2 usa 'term'
+
+        if (!$name) {
+            return response()->json([]);
+        }
+
+        $results = $moloni->getSuppliersByName($name);
+
+        $formatted = collect($results)
+            ->filter(fn($supplier) => isset($supplier['entity_id'], $supplier['name']))
+            ->map(fn($supplier) => [
+                'id' => $supplier['entity_id'],
+                'text' => $supplier['name'],
+            ])
+            ->values(); // limpa as chaves numéricas
+
+        return response()->json($formatted);
     }
 }

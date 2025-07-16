@@ -33,14 +33,6 @@
                     </tr>
                     <tr>
                         <th>
-                            {{ trans('cruds.moloniSuplierInvoice.fields.category') }}
-                        </th>
-                        <td>
-                            {{ App\Models\MoloniSuplierInvoice::CATEGORY_RADIO[$moloniSuplierInvoice->category] ?? '' }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
                             {{ trans('cruds.moloniSuplierInvoice.fields.photo') }}
                         </th>
                         <td>

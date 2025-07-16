@@ -28,18 +28,11 @@ class MoloniSuplierInvoice extends Model implements HasMedia
 
     protected $fillable = [
         'user_id',
-        'category',
         'data',
         'handled',
         'created_at',
         'updated_at',
         'deleted_at',
-    ];
-
-    public const CATEGORY_RADIO = [
-        '127490' => 'Airbagszentrum',
-        '127489' => 'Techniczentrum',
-        '343137' => 'Electriczentrum',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
