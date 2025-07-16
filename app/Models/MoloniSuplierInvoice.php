@@ -15,7 +15,6 @@ class MoloniSuplierInvoice extends Model implements HasMedia
     use SoftDeletes, InteractsWithMedia, HasFactory;
 
     protected $appends = [
-        'file',
         'photo',
     ];
 
@@ -50,11 +49,6 @@ class MoloniSuplierInvoice extends Model implements HasMedia
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
-    }
-
-    public function getFileAttribute()
-    {
-        return $this->getMedia('file')->last();
     }
 
     public function getPhotoAttribute()
