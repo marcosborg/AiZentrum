@@ -143,33 +143,80 @@ class MoloniService
         return $response->json(); // pode devolver um array vazio se não encontrar nada
     }
 
-    public function updateProductStockAndInfo(array $product, array $item): array
+    public function insertProduct(array $item): array
     {
         $token = $this->refreshAccessToken();
 
-        // Obter o stock atual
-        $currentStock = $product['stock'] ?? 0;
-        $newStock = $currentStock + (float) $item['quantity'];
-
         $payload = [
-            'company_id'   => config('services.moloni.company_id'),
-            'product_id'   => $product['product_id'],
-            'category_id'  => $product['category_id'] ?? 127495, // usa a categoria existente ou uma default
-            'type'         => 1, // Produto
-            'name'         => strtoupper($item['description']), // nome com descrição
+            'company_id'   => 13968,
+            'category_id'  => 127495,
+            'type'         => 1,
+            'name'         => $item['description'] ?? $item['reference'],
             'reference'    => $item['reference'],
             'price'        => $item['unit_price'],
-            'unit_id'      => $product['unit_id'] ?? 86267, // default: Unidade
+            'unit_id'      => $item['unit_id'],
             'has_stock'    => 1,
-            'stock'        => $newStock,
+            'stock'        => 0,
+            'taxes' => [
+                [
+                    'tax_id'     => 239841,
+                    'value'      => 23,
+                    'order'      => 1,
+                    'cumulative' => 1
+                ]
+            ],
         ];
 
-        $response = Http::asForm()->withHeaders([
+        $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $token,
-        ])->post("{$this->baseUrl}/products/update/?access_token={$token}", $payload);
+            'Content-Type' => 'application/json',
+        ])->post("{$this->baseUrl}/products/insert/?access_token={$token}&json=true", $payload);
+
+        $data = $response->json();
+
+        if (!$response->ok() || empty($data['product_id'])) {
+            throw new \Exception('Erro ao criar produto: ' . json_encode($data));
+        }
+
+        return $data;
+    }
+
+    public function insertSupplierInvoice(array $data): array
+    {
+        $token = $this->refreshAccessToken();
+
+        $payload = [
+            'company_id'      => config('services.moloni.company_id'),
+            'date'            => $data['invoice_date'],
+            'expiration_date' => $data['invoice_date'],
+            'document_set_id' => 784358,
+            'supplier_id'     => $data['supplier_id'],
+            'your_reference'  => $data['invoice_number'],
+            'products'        => [],
+            'status'          => 1,
+        ];
+
+        foreach ($data['items'] as $item) {
+            $payload['products'][] = [
+                'product_id' => $item['product_id'],
+                'name'       => $item['description'],
+                'qty'        => $item['quantity'],
+                'price'      => $item['unit_price'],
+                'taxes' => [
+                    [
+                        'tax_id'    => 239841,
+                    ]
+                ]
+            ];
+        }
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type'  => 'application/json',
+        ])->post("{$this->baseUrl}/supplierInvoices/insert/?access_token={$token}&json=true", $payload);
 
         if (!$response->ok()) {
-            throw new \Exception('Erro ao atualizar produto: ' . $response->body());
+            throw new \Exception('Erro ao criar fatura de fornecedor: ' . $response->body());
         }
 
         return $response->json();

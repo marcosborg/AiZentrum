@@ -310,16 +310,18 @@
                 method: 'POST',
                 data: {
                     _token: '{{ csrf_token() }}',
+                    moloni_suplier_invoice_id: '{{ $moloni_suplier_invoice->id }}',
                     data: invoiceData
                 },
                 success: function(response) {
-                    console.log(response);
                     alert('Dados enviados com sucesso!');
+                    window.location.href = '/admin/moloni-suplier-invoices';
                 },
                 error: function(xhr) {
                     alert('Erro ao sincronizar: ' + (xhr.responseJSON?.message || xhr.statusText));
                 }
             });
+
         });
     </script>
 @endsection

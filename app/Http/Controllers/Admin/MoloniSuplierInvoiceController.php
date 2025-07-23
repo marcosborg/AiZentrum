@@ -407,9 +407,6 @@ class MoloniSuplierInvoiceController extends Controller
     {
         $data = $request->input('data');
 
-        return $data;
-
-        // Validação básica
         $validated = validator($data, [
             'invoice_date'   => 'required|date',
             'invoice_number' => 'required|string',
@@ -423,35 +420,43 @@ class MoloniSuplierInvoiceController extends Controller
             'items.*.total'       => 'required|numeric',
         ])->validate();
 
-        $moloni = new MoloniService();
-        $itemsToSend = [];
+        // Recupera a fatura
+        $invoice = MoloniSuplierInvoice::findOrFail($request->input('moloni_suplier_invoice_id'));
 
-        foreach ($validated['items'] as $item) {
+        $moloni = new MoloniService();
+
+        foreach ($validated['items'] as &$item) {
             $existing = $moloni->searchProductByReference($item['reference']);
 
             if (empty($existing)) {
-                Log::info("Produto {$item['reference']} não existe.");
-                // Aqui poderás mais tarde criar o produto se quiseres
+                $created = $moloni->insertProduct([
+                    'reference'   => $item['reference'],
+                    'description' => $item['description'] ?? $item['reference'],
+                    'unit_price'  => $item['unit_price'],
+                    'unit_id'     => $item['unit_id'] ?? 86267,
+                    'vat'         => $item['vat'],
+                ]);
+                $item['product_id'] = $created['product_id'];
             } else {
-                $product = $existing[0];
-
-                // Atualiza o produto com nova descrição, preço e stock
-                $moloni->updateProductStockAndInfo($product, $item);
-
-                Log::info("Produto {$item['reference']} atualizado com ID: {$product['product_id']}");
-
-                $itemsToSend[] = [
-                    'product_id' => $product['product_id'],
-                    'qty'        => (float) $item['quantity'],
-                    'price'      => (float) $item['unit_price'],
-                    'taxes'      => [['tax_id' => 3787454]], // IVA 23% (exemplo)
-                ];
+                $item['product_id'] = $existing[0]['product_id'];
             }
         }
 
+        $moloni->insertSupplierInvoice([
+            'invoice_date'   => $validated['invoice_date'],
+            'invoice_number' => $validated['invoice_number'],
+            'supplier_id'    => $validated['supplier_id'],
+            'items'          => $validated['items'],
+        ]);
+
+        // Só atualiza o campo 'handled'
+        $invoice->update([
+            'handled' => 1,
+        ]);
+
         return response()->json([
-            'message' => 'Produtos verificados e atualizados com sucesso.',
-            'items_ready' => $itemsToSend,
+            'success' => true,
+            'message' => 'Fatura sincronizada e marcada como tratada com sucesso.'
         ]);
     }
 }
