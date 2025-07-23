@@ -124,4 +124,54 @@ class MoloniService
             'name' => $payload['name'], // devolvemos manualmente o nome que enviámos
         ];
     }
+
+    public function searchProductByReference(string $reference): array
+    {
+        $token = $this->refreshAccessToken();
+
+        $response = Http::asForm()->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->post("{$this->baseUrl}/products/getBySearch/?access_token={$token}", [
+            'company_id' => config('services.moloni.company_id'),
+            'search' => $reference,
+        ]);
+
+        if (!$response->ok()) {
+            throw new \Exception('Erro ao pesquisar produto: ' . $response->body());
+        }
+
+        return $response->json(); // pode devolver um array vazio se não encontrar nada
+    }
+
+    public function updateProductStockAndInfo(array $product, array $item): array
+    {
+        $token = $this->refreshAccessToken();
+
+        // Obter o stock atual
+        $currentStock = $product['stock'] ?? 0;
+        $newStock = $currentStock + (float) $item['quantity'];
+
+        $payload = [
+            'company_id'   => config('services.moloni.company_id'),
+            'product_id'   => $product['product_id'],
+            'category_id'  => $product['category_id'] ?? 127495, // usa a categoria existente ou uma default
+            'type'         => 1, // Produto
+            'name'         => strtoupper($item['description']), // nome com descrição
+            'reference'    => $item['reference'],
+            'price'        => $item['unit_price'],
+            'unit_id'      => $product['unit_id'] ?? 86267, // default: Unidade
+            'has_stock'    => 1,
+            'stock'        => $newStock,
+        ];
+
+        $response = Http::asForm()->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->post("{$this->baseUrl}/products/update/?access_token={$token}", $payload);
+
+        if (!$response->ok()) {
+            throw new \Exception('Erro ao atualizar produto: ' . $response->body());
+        }
+
+        return $response->json();
+    }
 }

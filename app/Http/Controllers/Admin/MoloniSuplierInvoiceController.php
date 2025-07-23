@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 use OpenAI\Laravel\Facades\OpenAI;
 use App\Services\MoloniService;
+use Illuminate\Support\Facades\Log;
 
 class MoloniSuplierInvoiceController extends Controller
 {
@@ -406,10 +407,51 @@ class MoloniSuplierInvoiceController extends Controller
     {
         $data = $request->input('data');
 
-        // Apenas para debug inicial:
+        return $data;
+
+        // Validação básica
+        $validated = validator($data, [
+            'invoice_date'   => 'required|date',
+            'invoice_number' => 'required|string',
+            'supplier_id'    => 'required|string',
+            'items'          => 'required|array|min:1',
+            'items.*.reference'   => 'required|string',
+            'items.*.description' => 'required|string',
+            'items.*.quantity'    => 'required|numeric',
+            'items.*.unit_price'  => 'required|numeric',
+            'items.*.vat'         => 'required|numeric',
+            'items.*.total'       => 'required|numeric',
+        ])->validate();
+
+        $moloni = new MoloniService();
+        $itemsToSend = [];
+
+        foreach ($validated['items'] as $item) {
+            $existing = $moloni->searchProductByReference($item['reference']);
+
+            if (empty($existing)) {
+                Log::info("Produto {$item['reference']} não existe.");
+                // Aqui poderás mais tarde criar o produto se quiseres
+            } else {
+                $product = $existing[0];
+
+                // Atualiza o produto com nova descrição, preço e stock
+                $moloni->updateProductStockAndInfo($product, $item);
+
+                Log::info("Produto {$item['reference']} atualizado com ID: {$product['product_id']}");
+
+                $itemsToSend[] = [
+                    'product_id' => $product['product_id'],
+                    'qty'        => (float) $item['quantity'],
+                    'price'      => (float) $item['unit_price'],
+                    'taxes'      => [['tax_id' => 3787454]], // IVA 23% (exemplo)
+                ];
+            }
+        }
+
         return response()->json([
-            'received' => $data,
-            'message' => 'Dados recebidos com sucesso!'
+            'message' => 'Produtos verificados e atualizados com sucesso.',
+            'items_ready' => $itemsToSend,
         ]);
     }
 }

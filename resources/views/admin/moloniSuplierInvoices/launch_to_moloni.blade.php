@@ -88,7 +88,7 @@
                             @endforeach
                         </tbody>
                     </table>
-                    <button type="button" class="btn btn-success btn-sm my-2" id="addRow">Adicionar item</button>
+                    <button type="button" class="btn btn-success btn-sm my-2" id="addRow">Adicionar item</button><br>
                     <button type="button" id="syncMoloniBtn" class="btn btn-primary mt-3">
                         Sincronizar com Moloni
                     </button>
