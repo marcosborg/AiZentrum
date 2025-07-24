@@ -9,11 +9,25 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3">
+                            
                             <div class="form-group">
                                 <label for="invoice_date" class="required">Data da fatura</label>
+                                @php
+                                    try {
+                                        $formattedDate = \Carbon\Carbon::createFromFormat('d/m/Y', $data->invoice_date)->format('Y-m-d');
+                                    } catch (\Exception $e) {
+                                        try {
+                                            $formattedDate = \Carbon\Carbon::parse($data->invoice_date)->format('Y-m-d');
+                                        } catch (\Exception $e) {
+                                            $formattedDate = '';
+                                        }
+                                    }
+                                @endphp
+
                                 <input class="form-control" type="date" name="invoice_date" id="invoice_date"
-                                    value="{{ \Carbon\Carbon::parse($data->invoice_date)->format('Y-m-d') ?? '' }}"
+                                    value="{{ $formattedDate }}"
                                     required>
+
                             </div>
                         </div>
                         <div class="col-md-3">
