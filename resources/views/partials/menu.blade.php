@@ -265,6 +265,28 @@
                 </ul>
             </li>
         @endcan
+        @can('ai_assistant_access')
+            <li class="c-sidebar-nav-dropdown {{ request()->is("admin/ai-messages*") ? "c-show" : "" }}">
+                <a class="c-sidebar-nav-dropdown-toggle" href="#">
+                    <i class="fa-fw fas fa-robot c-sidebar-nav-icon">
+
+                    </i>
+                    {{ trans('cruds.aiAssistant.title') }}
+                </a>
+                <ul class="c-sidebar-nav-dropdown-items">
+                    @can('ai_message_access')
+                        <li class="c-sidebar-nav-item">
+                            <a href="{{ route("admin.ai-messages.index") }}" class="c-sidebar-nav-link {{ request()->is("admin/ai-messages") || request()->is("admin/ai-messages/*") ? "c-active" : "" }}">
+                                <i class="fa-fw fas fa-comment-alt c-sidebar-nav-icon">
+
+                                </i>
+                                {{ trans('cruds.aiMessage.title') }}
+                            </a>
+                        </li>
+                    @endcan
+                </ul>
+            </li>
+        @endcan
         @if(file_exists(app_path('Http/Controllers/Auth/ChangePasswordController.php')))
             @can('profile_password_edit')
                 <li class="c-sidebar-nav-item">

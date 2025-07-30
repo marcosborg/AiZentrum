@@ -145,6 +145,10 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('moloni-suplier-invoices/media', 'MoloniSuplierInvoiceController@storeMedia')->name('moloni-suplier-invoices.storeMedia');
     Route::post('moloni-suplier-invoices/ckmedia', 'MoloniSuplierInvoiceController@storeCKEditorImages')->name('moloni-suplier-invoices.storeCKEditorImages');
     Route::resource('moloni-suplier-invoices', 'MoloniSuplierInvoiceController');
+
+    // Ai Message
+    Route::delete('ai-messages/destroy', 'AiMessageController@massDestroy')->name('ai-messages.massDestroy');
+    Route::resource('ai-messages', 'AiMessageController');
 });
 
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
