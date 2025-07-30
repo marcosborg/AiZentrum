@@ -74,16 +74,16 @@
                             @foreach ($data->items ?? [] as $index => $item)
                                 <tr>
                                     <td><input type="text" name="items[{{ $index }}][reference]"
-                                            class="form-control" value="{{ $item->reference }}"></td>
-                                    <td><input type="text" name="items[{{ $index }}][description]"
-                                            class="form-control" value="{{ $item->description }}"></td>
-                                    <td><input type="number" name="items[{{ $index }}][quantity]"
-                                            class="form-control" value="{{ $item->quantity }}" step="0.01"></td>
-                                    <td><input type="number" name="items[{{ $index }}][unit_price]"
-                                            class="form-control" value="{{ $item->unit_price }}" step="0.01"></td>
-                                    <td><input type="number" name="items[{{ $index }}][vat]" class="form-control"
-                                            value="{{ $item->vat ?? '' }}" step="0.01"></td>
-                                    <td><input type="number" name="items[{{ $index }}][total]" class="form-control"
+                                            class="form-control" value="{{ $item->reference ?? '' }}"></td>
+                                    <td><input type="text" name="items[{{ $index }}][description] ?? ''"
+                                            class="form-control" value="{{ $item->description }} ?? ''"></td>
+                                    <td><input type="number" name="items[{{ $index }}][quantity] ?? ''"
+                                            class="form-control" value="{{ $item->quantity }} ?? ''" step="0.01"></td>
+                                    <td><input type="number" name="items[{{ $index }}][unit_price] ?? ''"
+                                            class="form-control" value="{{ $item->unit_price }} ?? ''" step="0.01"></td>
+                                    <td><input type="number" name="items[{{ $index }}][vat] ?? ''" class="form-control"
+                                            value="{{ $item->vat ?? '' }}" step="0.01" ?? ''></td>
+                                    <td><input type="number" name="items[{{ $index }}][total] ?? ''" class="form-control"
                                             value="{{ $item->total }}" step="0.01"></td>
                                     <td>
                                         <select name="items[{{ $index }}][unit_id]" class="form-control">
