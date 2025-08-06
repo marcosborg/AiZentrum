@@ -150,6 +150,14 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::delete('ai-messages/destroy', 'AiMessageController@massDestroy')->name('ai-messages.massDestroy');
     Route::resource('ai-messages', 'AiMessageController');
 
+        // Technical Assistante Session
+    Route::delete('technical-assistante-sessions/destroy', 'TechnicalAssistanteSessionController@massDestroy')->name('technical-assistante-sessions.massDestroy');
+    Route::resource('technical-assistante-sessions', 'TechnicalAssistanteSessionController');
+
+    // Technical Assistante Messages
+    Route::delete('technical-assistante-messages/destroy', 'TechnicalAssistanteMessagesController@massDestroy')->name('technical-assistante-messages.massDestroy');
+    Route::resource('technical-assistante-messages', 'TechnicalAssistanteMessagesController');
+
 });
 
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {

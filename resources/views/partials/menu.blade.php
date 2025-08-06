@@ -240,6 +240,26 @@
                             </a>
                         </li>
                     @endcan
+                    @can('technical_assistante_session_access')
+                        <li class="c-sidebar-nav-item">
+                            <a href="{{ route("admin.technical-assistante-sessions.index") }}" class="c-sidebar-nav-link {{ request()->is("admin/technical-assistante-sessions") || request()->is("admin/technical-assistante-sessions/*") ? "c-active" : "" }}">
+                                <i class="fa-fw fas fa-headset c-sidebar-nav-icon">
+
+                                </i>
+                                {{ trans('cruds.technicalAssistanteSession.title') }}
+                            </a>
+                        </li>
+                    @endcan
+                    @can('technical_assistante_message_access')
+                        <li class="c-sidebar-nav-item">
+                            <a href="{{ route("admin.technical-assistante-messages.index") }}" class="c-sidebar-nav-link {{ request()->is("admin/technical-assistante-messages") || request()->is("admin/technical-assistante-messages/*") ? "c-active" : "" }}">
+                                <i class="fa-fw fas fa-comments c-sidebar-nav-icon">
+
+                                </i>
+                                {{ trans('cruds.technicalAssistanteMessage.title') }}
+                            </a>
+                        </li>
+                    @endcan
                 </ul>
             </li>
         @endcan

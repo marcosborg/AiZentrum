@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Models\Bot;
 
 class TechnicalAssistanteController extends Controller
 {
@@ -19,44 +20,40 @@ class TechnicalAssistanteController extends Controller
         $mensagemUser = $request->input('mensagem');
         $contexto = $request->input('contexto');
 
-        // Histórico da conversa na sessão
-        $historico = session()->get('chat_history', []);
+        // Obtem instruções do bot (ID 2)
+        $bot = Bot::find(2);
+        $instrucoes = $bot?->instructions ?? 'És um assistente técnico amigável.';
 
-        // Construímos a mensagem de contexto técnico apenas se existir
+        // Mensagem de contexto (se existir)
         if ($contexto) {
-            $mensagemContexto = "Contexto Técnico: 
-- Número da Fatura: {$contexto['invoice_number']}
-- Produto: {$contexto['product']}
-- Veículo: {$contexto['car']}
-- Comercial: {$contexto['comercial']}";
+            $mensagemContexto = "Contexto Técnico:\n"
+                . "- Número da Fatura: {$contexto['invoice_number']}\n"
+                . "- Produto: {$contexto['product']}\n"
+                . "- Veículo: {$contexto['car']}\n"
+                . "- Comercial: {$contexto['comercial']}";
         } else {
             $mensagemContexto = "Contexto técnico não fornecido.";
         }
 
-        // Prepara as mensagens para o GPT: sistema + histórico + nova pergunta
+        // Construção da conversa com GPT
         $messages = [
-            [
-                'role' => 'system',
-                'content' => 'És o Zé da Zentrum, um assistente técnico pós-venda amigável. Ajuda os clientes a esclarecer dúvidas sobre peças recebidas e problemas técnicos, sempre com clareza e simpatia.'
-            ],
-            [
-                'role' => 'system',
-                'content' => $mensagemContexto
-            ],
+            ['role' => 'system', 'content' => $instrucoes],
+            ['role' => 'system', 'content' => $mensagemContexto],
         ];
 
-        // Junta o histórico anterior
+        // Junta o histórico
+        $historico = session()->get('chat_history', []);
         foreach ($historico as $mensagem) {
             $messages[] = $mensagem;
         }
 
-        // Adiciona a nova pergunta do utilizador
+        // Adiciona a pergunta atual
         $messages[] = ['role' => 'user', 'content' => $mensagemUser];
 
         try {
             $response = Http::withToken(env('OPENAI_API_KEY'))
                 ->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => 'gpt-4',
+                    'model' => 'gpt-4o', // ou gpt-4 se preferires
                     'messages' => $messages,
                     'temperature' => 0.7,
                     'max_tokens' => 500,
@@ -71,7 +68,7 @@ class TechnicalAssistanteController extends Controller
 
             $respostaTexto = $response->json()['choices'][0]['message']['content'];
 
-            // Atualiza o histórico na sessão
+            // Guarda histórico
             $historico[] = ['role' => 'user', 'content' => $mensagemUser];
             $historico[] = ['role' => 'assistant', 'content' => $respostaTexto];
             session()->put('chat_history', $historico);
