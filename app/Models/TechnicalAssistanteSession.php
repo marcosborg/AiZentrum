@@ -37,4 +37,9 @@ class TechnicalAssistanteSession extends Model
     {
         return $date->format('Y-m-d H:i:s');
     }
+
+    public function messages()
+    {
+        return $this->hasMany(TechnicalAssistanteMessage::class, 'technical_assistante_session_id');
+    }
 }

@@ -22,6 +22,7 @@ class TechnicalAssistanteMessage extends Model
     public const ROLE_RADIO = [
         'user'      => 'User',
         'assistant' => 'Assistant',
+        'system' => 'Sistema'
     ];
 
     protected $fillable = [

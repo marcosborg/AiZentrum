@@ -16,56 +16,56 @@ class TechnicalAssistanteController extends Controller
     {
         $request->validate([
             'mensagem' => 'required|string|min:3',
-            'contexto' => 'nullable|array',
+            'contexto' => 'required|array',
+            'historico' => 'nullable|array',
         ]);
 
         $mensagemUser = $request->input('mensagem');
         $contexto = $request->input('contexto');
+        $historico = $request->input('historico') ?? [];
 
-        // Obter instruções do bot (ID 2)
+        // LOG para depuração
+        //Log::info('Dados recebidos no suporte técnico:', compact('mensagemUser', 'contexto', 'historico'));
+
+        // Obter instruções do bot
         $bot = Bot::find(2);
         $instrucoes = $bot?->instructions ?? 'És um assistente técnico amigável.';
 
-        // Criar ou obter sessão associada
-        $session = TechnicalAssistanteSession::firstOrCreate(
-            [
-                'client'          => $contexto['client'] ?? null,
-                'invoice_number'  => $contexto['invoice_number'] ?? null,
-            ],
-            [
-                'client_name'     => $contexto['client_name'] ?? '',
-                'nif'             => $contexto['nif'] ?? '',
-                'email'           => $contexto['email'] ?? '',
-                'product'         => $contexto['product'] ?? '',
-                'car'             => $contexto['car'] ?? '',
-                'comercial'       => $contexto['comercial'] ?? '',
-            ]
-        );
+        // Criar sessão de suporte com base no cliente e contexto
+        $client = $contexto['client'] ?? [];
 
-        // Mensagem de contexto
-        $mensagemContexto = $contexto
-            ? "Contexto Técnico:\n"
-            . "- Número da Fatura: {$contexto['invoice_number']}\n"
-            . "- Produto: {$contexto['product']}\n"
-            . "- Veículo: {$contexto['car']}\n"
-            . "- Comercial: {$contexto['comercial']}"
-            : "Contexto técnico não fornecido.";
+        $session = TechnicalAssistanteSession::firstOrCreate([
+            'client' => $client['id'] ?? null,
+            'invoice_number' => $contexto['invoice_number'] ?? null,
+        ], [
+            'client_name'     => $client['name'] ?? null,
+            'nif'             => $client['nif'] ?? null,
+            'email'           => $client['mail'] ?? null,
+            'product'         => $contexto['product'] ?? null,
+            'car'             => $contexto['car'] ?? null,
+            'comercial'       => $contexto['comercial'] ?? null,
+        ]);
 
+        // Adicionar instruções + contexto técnico
         $messages = [
             ['role' => 'system', 'content' => $instrucoes],
-            ['role' => 'system', 'content' => $mensagemContexto],
+            ['role' => 'system', 'content' => "Contexto Técnico:\n- Nº Fatura: {$contexto['invoice_number']}\n- Produto: {$contexto['product']}\n- Veículo: {$contexto['car']}\n- Comercial: {$contexto['comercial']}"],
         ];
 
-        // Conversa gravada em BD (últimas mensagens associadas)
-        $historico = $session->technical_assistante_messages()->orderBy('created_at')->get();
-        foreach ($historico as $mensagem) {
-            $messages[] = [
-                'role' => $mensagem->role,
-                'content' => $mensagem->content,
-            ];
+        // Guardar histórico anterior (se existir)
+        $isNewSession = $session->wasRecentlyCreated;
+
+        if ($isNewSession && is_array($historico)) {
+            foreach ($historico as $msg) {
+                TechnicalAssistanteMessage::create([
+                    'technical_assistante_session_id' => $session->id,
+                    'role' => $msg['role'],
+                    'content' => $msg['content'],
+                ]);
+            }
         }
 
-        // Adiciona mensagem atual do utilizador
+        // Adicionar nova mensagem do utilizador
         $messages[] = ['role' => 'user', 'content' => $mensagemUser];
 
         try {
@@ -78,42 +78,45 @@ class TechnicalAssistanteController extends Controller
                 ]);
 
             if (!$response->successful()) {
-                Log::error('Erro na API OpenAI: ' . $response->body());
-                return response()->json([
-                    'resposta' => 'Desculpa, ocorreu um erro ao tentar responder (API). Tenta novamente mais tarde.'
-                ], 500);
+                Log::error('Erro da OpenAI: ' . $response->body());
+                return response()->json(['resposta' => 'Erro ao tentar obter resposta do assistente.'], 500);
             }
 
             $respostaTexto = $response->json()['choices'][0]['message']['content'];
 
-            // Gravar mensagens
-            $session->technical_assistante_messages()->createMany([
-                [
-                    'role' => 'user',
-                    'content' => $mensagemUser,
-                ],
-                [
-                    'role' => 'assistant',
-                    'content' => $respostaTexto,
-                ],
+            // Guardar a nova interação
+            TechnicalAssistanteMessage::create([
+                'technical_assistante_session_id' => $session->id,
+                'role' => 'user',
+                'content' => $mensagemUser,
+            ]);
+
+            TechnicalAssistanteMessage::create([
+                'technical_assistante_session_id' => $session->id,
+                'role' => 'assistant',
+                'content' => $respostaTexto,
             ]);
 
             return response()->json(['resposta' => $respostaTexto]);
         } catch (\Exception $e) {
-            Log::error('Exceção na chamada ao GPT: ' . $e->getMessage());
-            return response()->json([
-                'resposta' => 'Desculpa, ocorreu um erro ao tentar responder. Por favor tenta novamente mais tarde.'
-            ], 500);
+            Log::error('Exceção na resposta GPT: ' . $e->getMessage());
+            return response()->json(['resposta' => 'Erro ao tentar responder.'], 500);
         }
     }
 
 
     public function resetChat(Request $request)
     {
-        $sessionId = $request->input('session_id');
+        $contexto = $request->input('contexto', []);
+        $client = is_array($contexto['client'] ?? null) ? ($contexto['client']['id'] ?? null) : ($contexto['client'] ?? null);
+        $invoice = $contexto['invoice_number'] ?? null;
 
-        if ($sessionId) {
-            TechnicalAssistanteMessage::where('technical_assistante_session_id', $sessionId)->delete();
+        $sessao = TechnicalAssistanteSession::where('client', $client)
+            ->where('invoice_number', $invoice)
+            ->first();
+
+        if ($sessao) {
+            $sessao->messages()->delete();
         }
 
         return response()->json(['success' => true]);
