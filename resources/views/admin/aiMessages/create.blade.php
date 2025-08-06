@@ -9,63 +9,85 @@
     <div class="card-body">
         <form method="POST" action="{{ route("admin.ai-messages.store") }}" enctype="multipart/form-data">
             @csrf
-            <div class="form-group">
-                <label class="required" for="client">{{ trans('cruds.aiMessage.fields.client') }}</label>
-                <input class="form-control {{ $errors->has('client') ? 'is-invalid' : '' }}" type="number" name="client" id="client" value="{{ old('client', '') }}" step="1" required>
-                @if($errors->has('client'))
-                    <div class="invalid-feedback">
-                        {{ $errors->first('client') }}
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="client_search">Pesquisar cliente (nome ou NIF)</label>
+                        <input type="text" id="client_search" class="form-control" placeholder="Digite o nome ou NIF do cliente...">
+                        <small class="form-text text-muted">Seleciona um cliente para preencher automaticamente os campos abaixo.</small>
                     </div>
-                @endif
-                <span class="help-block">{{ trans('cruds.aiMessage.fields.client_helper') }}</span>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="required" for="client">{{ trans('cruds.aiMessage.fields.client') }}</label>
+                        <input class="form-control {{ $errors->has('client') ? 'is-invalid' : '' }}" type="number" name="client" id="client" value="{{ old('client', '') }}" step="1" required>
+                        @if($errors->has('client'))
+                            <div class="invalid-feedback">
+                                {{ $errors->first('client') }}
+                            </div>
+                        @endif
+                        <span class="help-block">{{ trans('cruds.aiMessage.fields.client_helper') }}</span>
+                    </div>
+                </div>
+                <input type="hidden" name="client_name" id="client_name" value="">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="parent_id">{{ trans('cruds.aiMessage.fields.parent') }}</label>
+                        <select class="form-control select2 {{ $errors->has('parent') ? 'is-invalid' : '' }}" name="parent_id" id="parent_id">
+                            @foreach($parents as $id => $entry)
+                                <option value="{{ $id }}" {{ old('parent_id') == $id ? 'selected' : '' }}>{{ $entry }}</option>
+                            @endforeach
+                        </select>
+                        @if($errors->has('parent'))
+                            <div class="invalid-feedback">
+                                {{ $errors->first('parent') }}
+                            </div>
+                        @endif
+                        <span class="help-block">{{ trans('cruds.aiMessage.fields.parent_helper') }}</span>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="parent_id">{{ trans('cruds.aiMessage.fields.parent') }}</label>
-                <select class="form-control select2 {{ $errors->has('parent') ? 'is-invalid' : '' }}" name="parent_id" id="parent_id">
-                    @foreach($parents as $id => $entry)
-                        <option value="{{ $id }}" {{ old('parent_id') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                    @endforeach
-                </select>
-                @if($errors->has('parent'))
-                    <div class="invalid-feedback">
-                        {{ $errors->first('parent') }}
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="email">{{ trans('cruds.aiMessage.fields.email') }}</label>
+                        <input class="form-control {{ $errors->has('email') ? 'is-invalid' : '' }}" type="text" name="email" id="email" value="{{ old('email', '') }}">
+                        @if($errors->has('email'))
+                            <div class="invalid-feedback">
+                                {{ $errors->first('email') }}
+                            </div>
+                        @endif
+                        <span class="help-block">{{ trans('cruds.aiMessage.fields.email_helper') }}</span>
                     </div>
-                @endif
-                <span class="help-block">{{ trans('cruds.aiMessage.fields.parent_helper') }}</span>
-            </div>
-            <div class="form-group">
-                <label for="email">{{ trans('cruds.aiMessage.fields.email') }}</label>
-                <input class="form-control {{ $errors->has('email') ? 'is-invalid' : '' }}" type="text" name="email" id="email" value="{{ old('email', '') }}">
-                @if($errors->has('email'))
-                    <div class="invalid-feedback">
-                        {{ $errors->first('email') }}
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="nif">{{ trans('cruds.aiMessage.fields.nif') }}</label>
+                        <input class="form-control {{ $errors->has('nif') ? 'is-invalid' : '' }}" type="text" name="nif" id="nif" value="{{ old('nif', '') }}">
+                        @if($errors->has('nif'))
+                            <div class="invalid-feedback">
+                                {{ $errors->first('nif') }}
+                            </div>
+                        @endif
+                        <span class="help-block">{{ trans('cruds.aiMessage.fields.nif_helper') }}</span>
                     </div>
-                @endif
-                <span class="help-block">{{ trans('cruds.aiMessage.fields.email_helper') }}</span>
-            </div>
-            <div class="form-group">
-                <label for="nif">{{ trans('cruds.aiMessage.fields.nif') }}</label>
-                <input class="form-control {{ $errors->has('nif') ? 'is-invalid' : '' }}" type="text" name="nif" id="nif" value="{{ old('nif', '') }}">
-                @if($errors->has('nif'))
-                    <div class="invalid-feedback">
-                        {{ $errors->first('nif') }}
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="required" for="user_id">{{ trans('cruds.aiMessage.fields.user') }}</label>
+                        <select class="form-control select2 {{ $errors->has('user') ? 'is-invalid' : '' }}" name="user_id" id="user_id" required>
+                            @foreach($users as $id => $entry)
+                                <option value="{{ $id }}" {{ old('user_id', auth()->id()) == $id ? 'selected' : '' }}>{{ $entry }}</option>
+                            @endforeach
+                        </select>
+                        @if($errors->has('user'))
+                            <div class="invalid-feedback">
+                                {{ $errors->first('user') }}
+                            </div>
+                        @endif
+                        <span class="help-block">{{ trans('cruds.aiMessage.fields.user_helper') }}</span>
                     </div>
-                @endif
-                <span class="help-block">{{ trans('cruds.aiMessage.fields.nif_helper') }}</span>
-            </div>
-            <div class="form-group">
-                <label class="required" for="user_id">{{ trans('cruds.aiMessage.fields.user') }}</label>
-                <select class="form-control select2 {{ $errors->has('user') ? 'is-invalid' : '' }}" name="user_id" id="user_id" required>
-                    @foreach($users as $id => $entry)
-                        <option value="{{ $id }}" {{ old('user_id') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                    @endforeach
-                </select>
-                @if($errors->has('user'))
-                    <div class="invalid-feedback">
-                        {{ $errors->first('user') }}
-                    </div>
-                @endif
-                <span class="help-block">{{ trans('cruds.aiMessage.fields.user_helper') }}</span>
+                </div>
             </div>
             <div class="form-group">
                 <label for="context">{{ trans('cruds.aiMessage.fields.context') }}</label>
@@ -141,4 +163,55 @@
 
 
 
+@endsection
+@section('styles')
+@parent
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+@endsection
+
+@section('scripts')
+@parent
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Configurar CSRF Token para todas as chamadas AJAX
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        });
+
+        $('#client_search').autocomplete({
+            source: function (request, response) {
+                $.ajax({
+                    url: '{{ route("ai-messages.search") }}',
+                    method: 'POST', // Laravel espera POST para rotas protegidas por CSRF
+                    data: {
+                        term: request.term
+                    },
+                    success: function (data) {
+                        response($.map(data, function (item) {
+                            return {
+                                label: item.name + ' (' + item.nif + ')',
+                                value: item.name,
+                                id: item.id,
+                                nif: item.nif,
+                                email: item.email,
+                                context: item.context
+                            };
+                        }));
+                    }
+                });
+            },
+            minLength: 3,
+            select: function (event, ui) {
+                $('#client').val(ui.item.id);
+                $('#client_name').val(ui.item.value); // aqui vai o nome visível
+                $('#email').val(ui.item.email);
+                $('#nif').val(ui.item.nif);
+                $('#context').val(ui.item.context);
+            }
+        });
+    });
+</script>
 @endsection

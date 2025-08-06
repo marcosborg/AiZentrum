@@ -149,6 +149,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     // Ai Message
     Route::delete('ai-messages/destroy', 'AiMessageController@massDestroy')->name('ai-messages.massDestroy');
     Route::resource('ai-messages', 'AiMessageController');
+
 });
 
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
@@ -160,6 +161,8 @@ Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 
         Route::post('profile/destroy', 'ChangePasswordController@destroy')->name('password.destroyProfile');
     }
 });
+
+Route::post('ai-messages/search', [App\Http\Controllers\Admin\AiMessageController::class, 'search'])->name('ai-messages.search');
 
 Route::prefix('chat')->group(function () {
     Route::get('/assistant/{assistant_id}', 'WebsiteController@assistant');

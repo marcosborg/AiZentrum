@@ -7,10 +7,12 @@ use App\Http\Requests\MassDestroyAiMessageRequest;
 use App\Http\Requests\StoreAiMessageRequest;
 use App\Http\Requests\UpdateAiMessageRequest;
 use App\Models\AiMessage;
+use App\Services\ChatGptService;
 use App\Models\User;
 use Gate;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Http;
 
 class AiMessageController extends Controller
 {
@@ -36,9 +38,19 @@ class AiMessageController extends Controller
 
     public function store(StoreAiMessageRequest $request)
     {
+        // Cria o registo
         $aiMessage = AiMessage::create($request->all());
 
-        return redirect()->route('admin.ai-messages.index');
+        // Gera resposta da AI
+        $response = app(ChatGptService::class)->generateAiResponse($aiMessage);
+
+        // Atualiza com a resposta da AI
+        $aiMessage->update([
+            'ai_response' => $response
+        ]);
+
+        // Redireciona para edição já com resposta preenchida
+        return redirect()->route('admin.ai-messages.edit', $aiMessage->id);
     }
 
     public function edit(AiMessage $aiMessage)
@@ -88,5 +100,43 @@ class AiMessageController extends Controller
         }
 
         return response(null, Response::HTTP_NO_CONTENT);
+    }
+
+    public function search(Request $request)
+    {
+        $term = $request->get('term');
+
+        // Verifica se é e-mail ou NIF
+        $data = [];
+
+        if (filter_var($term, FILTER_VALIDATE_EMAIL)) {
+            $data['mail'] = $term;
+        } elseif (preg_match('/^\d{9}$/', $term)) {
+            $data['nif'] = $term;
+        } else {
+            return response()->json([]); // Termo inválido
+        }
+
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post('https://zcmanager.com/api/ai/get-client-by-mail-or-nif', $data);
+
+        if ($response->successful()) {
+            $clients = $response->json(); // agora é array
+
+            $result = collect($clients)->map(function ($client) {
+                return [
+                    'id'      => $client['id'] ?? null,
+                    'name'    => $client['name'] ?? 'Desconhecido',
+                    'email'   => $client['mail'] ?? '',
+                    'nif'     => $client['nif'] ?? '',
+                    'context' => $client['context'] ?? '',
+                ];
+            });
+
+            return response()->json($result);
+        }
+
+        return response()->json([]);
     }
 }

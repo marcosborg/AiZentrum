@@ -28,6 +28,7 @@ class AiMessage extends Model
 
     protected $fillable = [
         'client',
+        'client_name', // novo campo
         'parent_id',
         'email',
         'nif',
@@ -41,6 +42,7 @@ class AiMessage extends Model
         'updated_at',
         'deleted_at',
     ];
+
 
     public const CONFLICT_TYPE_RADIO = [
         'Problema de faturação'        => 'Problema de faturação',
