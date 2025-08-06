@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\Bot;
+use App\Models\TechnicalAssistanteSession;
+use App\Models\TechnicalAssistanteMessage;
 
 class TechnicalAssistanteController extends Controller
 {
@@ -20,40 +22,56 @@ class TechnicalAssistanteController extends Controller
         $mensagemUser = $request->input('mensagem');
         $contexto = $request->input('contexto');
 
-        // Obtem instruções do bot (ID 2)
+        // Obter instruções do bot (ID 2)
         $bot = Bot::find(2);
         $instrucoes = $bot?->instructions ?? 'És um assistente técnico amigável.';
 
-        // Mensagem de contexto (se existir)
-        if ($contexto) {
-            $mensagemContexto = "Contexto Técnico:\n"
-                . "- Número da Fatura: {$contexto['invoice_number']}\n"
-                . "- Produto: {$contexto['product']}\n"
-                . "- Veículo: {$contexto['car']}\n"
-                . "- Comercial: {$contexto['comercial']}";
-        } else {
-            $mensagemContexto = "Contexto técnico não fornecido.";
-        }
+        // Criar ou obter sessão associada
+        $session = TechnicalAssistanteSession::firstOrCreate(
+            [
+                'client'          => $contexto['client'] ?? null,
+                'invoice_number'  => $contexto['invoice_number'] ?? null,
+            ],
+            [
+                'client_name'     => $contexto['client_name'] ?? '',
+                'nif'             => $contexto['nif'] ?? '',
+                'email'           => $contexto['email'] ?? '',
+                'product'         => $contexto['product'] ?? '',
+                'car'             => $contexto['car'] ?? '',
+                'comercial'       => $contexto['comercial'] ?? '',
+            ]
+        );
 
-        // Construção da conversa com GPT
+        // Mensagem de contexto
+        $mensagemContexto = $contexto
+            ? "Contexto Técnico:\n"
+            . "- Número da Fatura: {$contexto['invoice_number']}\n"
+            . "- Produto: {$contexto['product']}\n"
+            . "- Veículo: {$contexto['car']}\n"
+            . "- Comercial: {$contexto['comercial']}"
+            : "Contexto técnico não fornecido.";
+
         $messages = [
             ['role' => 'system', 'content' => $instrucoes],
             ['role' => 'system', 'content' => $mensagemContexto],
         ];
 
-        // Junta o histórico
-        $historico = session()->get('chat_history', []);
+        // Conversa gravada em BD (últimas mensagens associadas)
+        $historico = $session->technical_assistante_messages()->orderBy('created_at')->get();
         foreach ($historico as $mensagem) {
-            $messages[] = $mensagem;
+            $messages[] = [
+                'role' => $mensagem->role,
+                'content' => $mensagem->content,
+            ];
         }
 
-        // Adiciona a pergunta atual
+        // Adiciona mensagem atual do utilizador
         $messages[] = ['role' => 'user', 'content' => $mensagemUser];
 
         try {
             $response = Http::withToken(env('OPENAI_API_KEY'))
                 ->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => 'gpt-4o', // ou gpt-4 se preferires
+                    'model' => 'gpt-4o',
                     'messages' => $messages,
                     'temperature' => 0.7,
                     'max_tokens' => 500,
@@ -68,10 +86,17 @@ class TechnicalAssistanteController extends Controller
 
             $respostaTexto = $response->json()['choices'][0]['message']['content'];
 
-            // Guarda histórico
-            $historico[] = ['role' => 'user', 'content' => $mensagemUser];
-            $historico[] = ['role' => 'assistant', 'content' => $respostaTexto];
-            session()->put('chat_history', $historico);
+            // Gravar mensagens
+            $session->technical_assistante_messages()->createMany([
+                [
+                    'role' => 'user',
+                    'content' => $mensagemUser,
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => $respostaTexto,
+                ],
+            ]);
 
             return response()->json(['resposta' => $respostaTexto]);
         } catch (\Exception $e) {
@@ -82,9 +107,15 @@ class TechnicalAssistanteController extends Controller
         }
     }
 
-    public function resetChat()
+
+    public function resetChat(Request $request)
     {
-        session()->forget('chat_history');
+        $sessionId = $request->input('session_id');
+
+        if ($sessionId) {
+            TechnicalAssistanteMessage::where('technical_assistante_session_id', $sessionId)->delete();
+        }
+
         return response()->json(['success' => true]);
     }
 }
