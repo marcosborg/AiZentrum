@@ -118,8 +118,18 @@
 
           chatHistory.push({
             role: 'system',
-            content: `Resumo técnico:\n${data.final_report || 'Sem relatório final disponível.'}`
+            content: `
+          Estás a atuar como um assistente de suporte técnico da Zentrum.
+          O teu objetivo é ajudar o cliente com base na fatura indicada, mantendo sempre um tom profissional, calmo, empático e conciliador.
+          Mesmo que o cliente esteja frustrado ou irritado, nunca deves responder de forma defensiva. 
+          Mostra compreensão, oferece ajuda concreta e foca-te sempre em encontrar soluções.
+          Evita jargões técnicos e comunica de forma clara e acessível.
+
+          Resumo técnico da fatura:
+          ${data.final_report || 'Sem relatório final disponível.'}
+          `
           });
+
         })
         .catch(() => {
           mostrarMensagemNoChat("Ocorreu um erro ao contactar o servidor. Tenta novamente.", 'bot');
