@@ -81,7 +81,23 @@
             height: 370px;
             background: #fafafa;
         }
+        /* Espaço reservado para a altura do header */
+:root { --header-h: 0px; }
+
+/* Empurra o modal para baixo do header e ajusta a altura */
+.modal.terms-modal {
+  top: var(--header-h);
+  height: calc(100% - var(--header-h));
+}
+
+/* O backdrop também não deve cobrir o header */
+.modal-backdrop.backdrop-terms {
+  top: var(--header-h);
+  height: calc(100% - var(--header-h));
+}
+
     </style>
+    
 </head>
 
 <body>
@@ -103,7 +119,7 @@
         </div>
         </div>
         <!-- Modal Condições de Utilização -->
-        <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+        <div class="modal fade terms-modal" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                 <div class="modal-header bg-warning">
@@ -510,27 +526,57 @@
             }
         }
         $(() => {
-            // Verifica se já aceitou os termos
-            if (!localStorage.getItem('chat_terms_accepted')) {
-                $('#termsModal').modal({
-                    backdrop: 'static',
-                    keyboard: false
-                }).modal('show');
-            }
+  if (!localStorage.getItem('chat_terms_accepted')) {
+    $('#termsModal').modal('show');
+  }
 
-            $('#acceptTerms').on('click', function() {
-                localStorage.setItem('chat_terms_accepted', 'true');
-                $('#termsModal').modal('hide');
-            });
+  $('#acceptTerms').on('click', function () {
+    localStorage.setItem('chat_terms_accepted', 'true');
+    $('#termsModal').modal('hide');
+  });
 
-            // Bloqueia envio de mensagens se não aceitou
-            $('#message-textarea').on('keypress', function(e) {
-                if (!localStorage.getItem('chat_terms_accepted')) {
-                    e.preventDefault();
-                    $('#termsModal').modal('show');
-                }
-            });
-        });
+  $('#message-textarea').on('keypress', function (e) {
+    if (!localStorage.getItem('chat_terms_accepted')) {
+      e.preventDefault();
+      $('#termsModal').modal('show');
+    }
+  });
+});
+
+
+        $(() => {
+  // Seleciona o teu header fixo (ajusta o seletor conforme o teu tema)
+  function getHeaderHeight() {
+    // tenta vários seletores comuns; ajusta se necessário
+    const $hdr = $('header:visible').first().length ? $('header:visible').first()
+               : $('.header:visible').first().length ? $('.header:visible').first()
+               : $('#header:visible').first();
+    return $hdr.length ? $hdr.outerHeight() : 0;
+  }
+
+  const $terms = $('#termsModal');
+
+  // Antes de abrir o modal, define a variável --header-h e marca o backdrop
+  $terms.on('show.bs.modal', function () {
+    const h = getHeaderHeight() || 80; // fallback sensato
+    document.documentElement.style.setProperty('--header-h', h + 'px');
+
+    // O backdrop é criado dinamicamente; damos-lhe a classe logo após aparecer
+    // pequeno atraso para garantir que o elemento existe
+    setTimeout(() => {
+      $('.modal-backdrop').addClass('backdrop-terms');
+    }, 0);
+  });
+
+  // Ao fechar, limpa a classe do backdrop (por higiene)
+  $terms.on('hidden.bs.modal', function () {
+    $('.modal-backdrop').removeClass('backdrop-terms');
+  });
+
+  // (opcional) impedir fechar sem aceitar
+  $terms.modal({ backdrop: 'static', keyboard: false });
+});
+
 
     </script>
 
