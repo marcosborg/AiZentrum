@@ -13,6 +13,9 @@ use Gate;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Http;
+use App\Models\AiAssistantCategory;
+use App\Models\AiAssistantIntruction; // atenção ao nome do model/tabela, como no teu código
+use Illuminate\Support\Facades\Auth;
 
 class AiMessageController extends Controller
 {
@@ -205,5 +208,44 @@ class AiMessageController extends Controller
 
         // devolvemos JSON simples; o front trata de renderizar
         return response()->json($history);
+    }
+
+    public function assistantCategories(Request $request)
+    {
+        $userId = $request->query('user_id') ?: (Auth::check() ? Auth::id() : null);
+
+        // categorias do utilizador + (opcional) categorias globais (user_id = null)
+        $cats = AiAssistantCategory::query()
+            ->when($userId, function ($q) use ($userId) {
+                $q->where(function ($q2) use ($userId) {
+                    $q2->where('user_id', $userId)->orWhereNull('user_id');
+                });
+            })
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return response()->json($cats);
+    }
+
+    public function assistantInstructions(Request $request)
+    {
+        $userId     = $request->query('user_id') ?: (Auth::check() ? Auth::id() : null);
+        $categoryId = $request->query('category_id');
+
+        if (!$categoryId) {
+            return response()->json([]);
+        }
+
+        $list = AiAssistantIntruction::query()
+            ->where('ai_assistant_category_id', $categoryId)
+            ->when($userId, function ($q) use ($userId) {
+                $q->where(function ($q2) use ($userId) {
+                    $q2->where('user_id', $userId)->orWhereNull('user_id');
+                });
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'instructions']);
+
+        return response()->json($list);
     }
 }

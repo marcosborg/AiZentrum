@@ -7,7 +7,6 @@
         </div>
 
         <div class="card-body">
-            {{-- Mensagem de sucesso (opcional) --}}
             @if(session('status'))
                 <div class="alert alert-success">{{ session('status') }}</div>
             @endif
@@ -16,19 +15,15 @@
                 @csrf
 
                 <div class="row">
-                    {{-- Pesquisa (email ou NIF) e autocompletar --}}
+                    {{-- Pesquisa (email ou NIF) --}}
                     <div class="col-md-3">
                         <div class="form-group">
                             <label for="client_search">Pesquisar cliente (email ou NIF)</label>
-                            <input
-                                type="text"
-                                id="client_search"
-                                class="form-control"
-                                placeholder="Digite o email ou NIF do cliente..."
-                                {{ ($ai_message_id ?? 0) !== 0 ? 'disabled' : '' }}
-                            >
-                            <small class="form-text text-muted">
-                                Seleciona um cliente para preencher automaticamente os campos abaixo e carregar o histórico.
+                            <input type="text" id="client_search" class="form-control"
+                                   placeholder="Digite o email ou NIF do cliente..."
+                                   {{ ($ai_message_id ?? 0) !== 0 ? 'disabled' : '' }}>
+                            <small class="help-block">
+                                Seleciona um cliente para preencher automaticamente os campos e carregar o histórico.
                             </small>
                         </div>
                     </div>
@@ -37,29 +32,19 @@
                     <div class="col-md-3">
                         <div class="form-group">
                             <label for="client_name">Client name</label>
-                            <input
-                                type="text"
-                                name="client_name"
-                                id="client_name"
-                                class="form-control"
-                                value="{{ $ai_message ? $ai_message->client_name : '' }}"
-                            >
+                            <input type="text" name="client_name" id="client_name" class="form-control"
+                                   value="{{ $ai_message ? $ai_message->client_name : '' }}">
                         </div>
                     </div>
 
-                    {{-- ZCM client ID (a nossa "thread") --}}
+                    {{-- ZCM client ID (thread) --}}
                     <div class="col-md-3">
                         <div class="form-group">
                             <label class="required" for="client">ZCM client ID</label>
-                            <input
-                                class="form-control {{ $errors->has('client') ? 'is-invalid' : '' }}"
-                                type="number"
-                                name="client"
-                                id="client"
-                                value="{{ old('client', isset($threadId) ? $threadId : ($ai_message ? $ai_message->client : '')) }}"
-                                step="1"
-                                required
-                            >
+                            <input class="form-control {{ $errors->has('client') ? 'is-invalid' : '' }}" type="number"
+                                   name="client" id="client"
+                                   value="{{ old('client', isset($threadId) ? $threadId : ($ai_message ? $ai_message->client : '')) }}"
+                                   step="1" required>
                             @if ($errors->has('client'))
                                 <div class="invalid-feedback">{{ $errors->first('client') }}</div>
                             @endif
@@ -81,13 +66,8 @@
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="email">{{ trans('cruds.aiMessage.fields.email') }}</label>
-                            <input
-                                class="form-control {{ $errors->has('email') ? 'is-invalid' : '' }}"
-                                type="text"
-                                name="email"
-                                id="email"
-                                value="{{ old('email', $ai_message ? $ai_message->email : '') }}"
-                            >
+                            <input class="form-control {{ $errors->has('email') ? 'is-invalid' : '' }}" type="text"
+                                   name="email" id="email" value="{{ old('email', $ai_message ? $ai_message->email : '') }}">
                             @if ($errors->has('email'))
                                 <div class="invalid-feedback">{{ $errors->first('email') }}</div>
                             @endif
@@ -98,13 +78,8 @@
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="nif">{{ trans('cruds.aiMessage.fields.nif') }}</label>
-                            <input
-                                class="form-control {{ $errors->has('nif') ? 'is-invalid' : '' }}"
-                                type="text"
-                                name="nif"
-                                id="nif"
-                                value="{{ old('nif', $ai_message ? $ai_message->nif : '') }}"
-                            >
+                            <input class="form-control {{ $errors->has('nif') ? 'is-invalid' : '' }}" type="text"
+                                   name="nif" id="nif" value="{{ old('nif', $ai_message ? $ai_message->nif : '') }}">
                             @if ($errors->has('nif'))
                                 <div class="invalid-feedback">{{ $errors->first('nif') }}</div>
                             @endif
@@ -115,12 +90,8 @@
                     <div class="col-md-4">
                         <div class="form-group">
                             <label class="required" for="user_id">{{ trans('cruds.aiMessage.fields.user') }}</label>
-                            <select
-                                class="form-control select2 {{ $errors->has('user') ? 'is-invalid' : '' }}"
-                                name="user_id"
-                                id="user_id"
-                                required
-                            >
+                            <select class="form-control select2 {{ $errors->has('user') ? 'is-invalid' : '' }}"
+                                    name="user_id" id="user_id" required>
                                 @foreach ($users as $id => $entry)
                                     <option value="{{ $id }}" {{ old('user_id', auth()->id()) == $id ? 'selected' : '' }}>
                                         {{ $entry }}
@@ -135,7 +106,41 @@
                     </div>
                 </div>
 
-                {{-- Histórico (render inicial do servidor OU placeholder para AJAX) --}}
+                {{-- Categorias & Instruções (AJAX) --}}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="assistant_category_id">Categoria de instruções</label>
+                            <select id="assistant_category_id" class="form-control">
+                                <option value="">— Selecionar categoria —</option>
+                            </select>
+                            <small class="help-block">Carregadas por utilizador.</small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <div class="form-group">
+                            <label for="assistant_instruction_id">Instruções pré-definidas</label>
+                            <select id="assistant_instruction_id" class="form-control" disabled>
+                                <option value="">— Selecionar instrução —</option>
+                            </select>
+                            <div class="checkbox" style="margin-top:6px;">
+                                <label>
+                                    <input type="checkbox" id="append_instruction" /> Adicionar ao contexto (em vez de substituir)
+                                </label>
+                            </div>
+                            <small class="help-block">Ao selecionar, o texto é aplicado no campo Context.</small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-group" style="margin-top:24px;">
+                            <button type="button" id="clear_context" class="btn btn-default btn-block">Limpar Context</button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Histórico --}}
                 @if (isset($history) && $history->isNotEmpty())
                     <div id="history_card" class="card mb-3">
                         <div class="card-header">Histórico do cliente</div>
@@ -167,11 +172,8 @@
                 {{-- Contexto / Resposta --}}
                 <div class="form-group">
                     <label for="context">{{ trans('cruds.aiMessage.fields.context') }}</label>
-                    <textarea
-                        class="form-control {{ $errors->has('context') ? 'is-invalid' : '' }}"
-                        name="context"
-                        id="context"
-                    >{{ old('context') }}</textarea>
+                    <textarea class="form-control {{ $errors->has('context') ? 'is-invalid' : '' }}"
+                              name="context" id="context">{{ old('context') }}</textarea>
                     @if ($errors->has('context'))
                         <div class="invalid-feedback">{{ $errors->first('context') }}</div>
                     @endif
@@ -180,11 +182,8 @@
 
                 <div class="form-group">
                     <label for="ai_response">{{ trans('cruds.aiMessage.fields.ai_response') }}</label>
-                    <textarea
-                        class="form-control {{ $errors->has('ai_response') ? 'is-invalid' : '' }}"
-                        name="ai_response"
-                        id="ai_response"
-                    >{{ old('ai_response') }}</textarea>
+                    <textarea class="form-control {{ $errors->has('ai_response') ? 'is-invalid' : '' }}"
+                              name="ai_response" id="ai_response">{{ old('ai_response') }}</textarea>
                     @if ($errors->has('ai_response'))
                         <div class="invalid-feedback">{{ $errors->first('ai_response') }}</div>
                     @endif
@@ -196,15 +195,10 @@
                     <label class="required">{{ trans('cruds.aiMessage.fields.conflict_type') }}</label>
                     @foreach (App\Models\AiMessage::CONFLICT_TYPE_RADIO as $key => $label)
                         <div class="form-check {{ $errors->has('conflict_type') ? 'is-invalid' : '' }}">
-                            <input
-                                class="form-check-input"
-                                type="radio"
-                                id="conflict_type_{{ $key }}"
-                                name="conflict_type"
-                                value="{{ $key }}"
-                                {{ old('conflict_type', $ai_message ? $ai_message->conflict_type : '') === (string) $key ? 'checked' : '' }}
-                                required
-                            >
+                            <input class="form-check-input" type="radio" id="conflict_type_{{ $key }}"
+                                   name="conflict_type" value="{{ $key }}"
+                                   {{ old('conflict_type', $ai_message ? $ai_message->conflict_type : '') === (string) $key ? 'checked' : '' }}
+                                   required>
                             <label class="form-check-label" for="conflict_type_{{ $key }}">{{ $label }}</label>
                         </div>
                     @endforeach
@@ -218,15 +212,10 @@
                     <label class="required">{{ trans('cruds.aiMessage.fields.urgency') }}</label>
                     @foreach (App\Models\AiMessage::URGENCY_RADIO as $key => $label)
                         <div class="form-check {{ $errors->has('urgency') ? 'is-invalid' : '' }}">
-                            <input
-                                class="form-check-input"
-                                type="radio"
-                                id="urgency_{{ $key }}"
-                                name="urgency"
-                                value="{{ $key }}"
-                                {{ old('urgency', $ai_message ? $ai_message->urgency : '') === (string) $key ? 'checked' : '' }}
-                                required
-                            >
+                            <input class="form-check-input" type="radio" id="urgency_{{ $key }}"
+                                   name="urgency" value="{{ $key }}"
+                                   {{ old('urgency', $ai_message ? $ai_message->urgency : '') === (string) $key ? 'checked' : '' }}
+                                   required>
                             <label class="form-check-label" for="urgency_{{ $key }}">{{ $label }}</label>
                         </div>
                     @endforeach
@@ -239,14 +228,8 @@
                 <div class="form-group">
                     <div class="form-check {{ $errors->has('resolved') ? 'is-invalid' : '' }}">
                         <input type="hidden" name="resolved" value="0">
-                        <input
-                            class="form-check-input"
-                            type="checkbox"
-                            name="resolved"
-                            id="resolved"
-                            value="1"
-                            {{ old('resolved', $ai_message ? $ai_message->resolved : 0) == 1 ? 'checked' : '' }}
-                        >
+                        <input class="form-check-input" type="checkbox" name="resolved" id="resolved" value="1"
+                               {{ old('resolved', $ai_message ? $ai_message->resolved : 0) == 1 ? 'checked' : '' }}>
                         <label class="form-check-label" for="resolved">
                             {{ trans('cruds.aiMessage.fields.resolved') }}
                         </label>
@@ -276,52 +259,119 @@
     @parent
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script>
-        // Helpers para render do histórico
+        // Helpers de renderização
         function escapeHtml(str) {
             if (typeof str !== 'string') return '';
-            return str.replace(/&/g, '&amp;')
-                      .replace(/</g, '&lt;')
-                      .replace(/>/g, '&gt;');
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
-
         function renderHistory(items) {
-            var $card = $('#history_card');
-            var $body = $('#history_body');
-
+            var $card = $('#history_card'), $body = $('#history_body');
             if (!items || !items.length) {
                 $body.html('<em>Sem histórico para este cliente.</em>');
                 $card.removeClass('d-none');
                 return;
             }
-
             var html = '';
-            items.forEach(function(m) {
+            items.forEach(function (m) {
                 if (m.context) {
-                    html += '<div class="mb-2">';
-                    html += '<strong>Cliente:</strong>';
-                    html += '<div class="border rounded p-2">' + escapeHtml(m.context) + '</div>';
-                    html += '<small class="text-muted">' + (m.created_at || '') + '</small>';
-                    html += '</div>';
+                    html += '<div class="mb-2"><strong>Cliente:</strong><div class="border rounded p-2">' +
+                        escapeHtml(m.context) + '</div><small class="text-muted">' + (m.created_at || '') + '</small></div>';
                 }
                 if (m.ai_response) {
-                    html += '<div class="mb-3">';
-                    html += '<strong>Assistente:</strong>';
-                    html += '<div class="border rounded bg-light p-2">' + escapeHtml(m.ai_response) + '</div>';
-                    html += '</div>';
+                    html += '<div class="mb-3"><strong>Assistente:</strong><div class="border rounded bg-light p-2">' +
+                        escapeHtml(m.ai_response) + '</div></div>';
                 }
             });
-
             $body.html(html);
             $card.removeClass('d-none');
         }
 
-        $(document).ready(function() {
-            // CSRF para AJAX
-            $.ajaxSetup({
-                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+        // AJAX helpers
+        function loadCategories() {
+            var userId = $('#user_id').val();
+            $('#assistant_category_id').prop('disabled', true).html('<option value="">A carregar...</option>');
+            $('#assistant_instruction_id').prop('disabled', true).html('<option value="">— Selecionar instrução —</option>');
+            $.ajax({
+                url: '{{ route('admin.ai-messages.assistant.categories') }}',
+                method: 'GET',
+                data: { user_id: userId },
+                success: function (list) {
+                    var opts = '<option value="">— Selecionar categoria —</option>';
+                    (list || []).forEach(function (c) {
+                        opts += '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>';
+                    });
+                    $('#assistant_category_id').html(opts).prop('disabled', false);
+                },
+                error: function () {
+                    $('#assistant_category_id').html('<option value="">(erro ao carregar)</option>');
+                }
+            });
+        }
+        function loadInstructions() {
+            var userId = $('#user_id').val();
+            var catId  = $('#assistant_category_id').val();
+            if (!catId) {
+                $('#assistant_instruction_id').prop('disabled', true).html('<option value="">— Selecionar instrução —</option>');
+                return;
+            }
+            $('#assistant_instruction_id').prop('disabled', true).html('<option value="">A carregar...</option>');
+            $.ajax({
+                url: '{{ route('admin.ai-messages.assistant.instructions') }}',
+                method: 'GET',
+                data: { user_id: userId, category_id: catId },
+                success: function (list) {
+                    var opts = '<option value="">— Selecionar instrução —</option>';
+                    (list || []).forEach(function (i) {
+                        // guardamos o texto nas data-attributes para aplicar depois
+                        opts += '<option value="' + i.id + '" data-text="' + $('<div>').text(i.instructions || '').html() + '">' +
+                            escapeHtml(i.name) + '</option>';
+                    });
+                    $('#assistant_instruction_id').html(opts).prop('disabled', false);
+                },
+                error: function () {
+                    $('#assistant_instruction_id').html('<option value="">(erro ao carregar)</option>');
+                }
+            });
+        }
+
+        $(function () {
+            // CSRF (apenas necessário para POST; mantemos por consistência)
+            $.ajaxSetup({ headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } });
+
+            // Carregar categorias na entrada e quando o user mudar
+            loadCategories();
+            $('#user_id').on('change', function () {
+                loadCategories();
             });
 
-            // Autocomplete (rotas dentro do grupo admin)
+            // Quando escolher a categoria -> carregar instruções
+            $('#assistant_category_id').on('change', function () {
+                loadInstructions();
+            });
+
+            // Ao escolher uma instrução -> aplicar no contexto
+            $('#assistant_instruction_id').on('change', function () {
+                var $opt = $(this).find('option:selected');
+                var text = $opt.data('text') ? $('<div>').html($opt.data('text')).text() : ''; // decode
+                if (!text) return;
+
+                var $ctx = $('#context');
+                var append = $('#append_instruction').is(':checked');
+
+                if (append && $ctx.val().trim() !== '') {
+                    $ctx.val($ctx.val().trim() + "\n\n" + text);
+                } else {
+                    $ctx.val(text);
+                }
+                $ctx.trigger('input'); // caso tenhas algum contador de chars
+            });
+
+            // Limpar contexto
+            $('#clear_context').on('click', function () {
+                $('#context').val('');
+            });
+
+            // Autocomplete cliente (mantém a tua lógica)
             $('#client_search').autocomplete({
                 source: function(request, response) {
                     $.ajax({
@@ -333,10 +383,8 @@
                                 return {
                                     label: (item.name || 'Sem nome') + (item.nif ? ' (' + item.nif + ')' : ''),
                                     value: item.name || '',
-                                    id: item.id,
-                                    nif: item.nif || '',
-                                    email: item.email || '',
-                                    context: item.context || ''
+                                    id: item.id, nif: item.nif || '',
+                                    email: item.email || '', context: item.context || ''
                                 };
                             }));
                         }
@@ -344,34 +392,20 @@
                 },
                 minLength: 3,
                 select: function(event, ui) {
-                    // Preenche campos
                     $('#client').val(ui.item.id);
                     $('#client_name').val(ui.item.value);
                     $('#email').val(ui.item.email);
                     $('#nif').val(ui.item.nif);
-
-                    // Opcional: pré-preencher o contexto
-                    if (ui.item.context) {
-                        $('#context').val(ui.item.context);
-                    }
-
-                    // Atualiza indicador de thread
+                    if (ui.item.context) { $('#context').val(ui.item.context); }
                     $('#thread_label').text(ui.item.id);
-
-                    // Busca histórico por AJAX (sem refresh)
                     $.ajax({
                         url: '{{ route('admin.ai-messages.history') }}',
                         method: 'POST',
                         data: { client: ui.item.id },
-                        success: function(items) {
-                            renderHistory(items);
-                        },
-                        error: function() {
-                            renderHistory([]);
-                        }
+                        success: renderHistory,
+                        error: function(){ renderHistory([]); }
                     });
-
-                    return false; // evita comportamento default
+                    return false;
                 }
             });
         });

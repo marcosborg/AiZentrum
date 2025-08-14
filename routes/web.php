@@ -174,6 +174,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('ai-assistant-intructions/media', 'AiAssistantIntructionController@storeMedia')->name('ai-assistant-intructions.storeMedia');
     Route::post('ai-assistant-intructions/ckmedia', 'AiAssistantIntructionController@storeCKEditorImages')->name('ai-assistant-intructions.storeCKEditorImages');
     Route::resource('ai-assistant-intructions', 'AiAssistantIntructionController');
+
+    // AJAX para categorias e instruções do assistente
+    Route::get('ai-messages/assistant/categories', 'AiMessageController@assistantCategories')
+        ->name('ai-messages.assistant.categories');
+
+    Route::get('ai-messages/assistant/instructions', 'AiMessageController@assistantInstructions')
+        ->name('ai-messages.assistant.instructions');
 });
 
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
