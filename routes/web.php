@@ -164,6 +164,16 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     // Technical Assistante Messages
     Route::delete('technical-assistante-messages/destroy', 'TechnicalAssistanteMessagesController@massDestroy')->name('technical-assistante-messages.massDestroy');
     Route::resource('technical-assistante-messages', 'TechnicalAssistanteMessagesController');
+
+    // Ai Assistant Category
+    Route::delete('ai-assistant-categories/destroy', 'AiAssistantCategoryController@massDestroy')->name('ai-assistant-categories.massDestroy');
+    Route::resource('ai-assistant-categories', 'AiAssistantCategoryController');
+
+    // Ai Assistant Intruction
+    Route::delete('ai-assistant-intructions/destroy', 'AiAssistantIntructionController@massDestroy')->name('ai-assistant-intructions.massDestroy');
+    Route::post('ai-assistant-intructions/media', 'AiAssistantIntructionController@storeMedia')->name('ai-assistant-intructions.storeMedia');
+    Route::post('ai-assistant-intructions/ckmedia', 'AiAssistantIntructionController@storeCKEditorImages')->name('ai-assistant-intructions.storeCKEditorImages');
+    Route::resource('ai-assistant-intructions', 'AiAssistantIntructionController');
 });
 
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {

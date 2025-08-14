@@ -304,6 +304,26 @@
                             </a>
                         </li>
                     @endcan
+                    @can('ai_assistant_category_access')
+                        <li class="c-sidebar-nav-item">
+                            <a href="{{ route("admin.ai-assistant-categories.index") }}" class="c-sidebar-nav-link {{ request()->is("admin/ai-assistant-categories") || request()->is("admin/ai-assistant-categories/*") ? "c-active" : "" }}">
+                                <i class="fa-fw fas fa-boxes c-sidebar-nav-icon">
+
+                                </i>
+                                {{ trans('cruds.aiAssistantCategory.title') }}
+                            </a>
+                        </li>
+                    @endcan
+                    @can('ai_assistant_intruction_access')
+                        <li class="c-sidebar-nav-item">
+                            <a href="{{ route("admin.ai-assistant-intructions.index") }}" class="c-sidebar-nav-link {{ request()->is("admin/ai-assistant-intructions") || request()->is("admin/ai-assistant-intructions/*") ? "c-active" : "" }}">
+                                <i class="fa-fw fas fa-tasks c-sidebar-nav-icon">
+
+                                </i>
+                                {{ trans('cruds.aiAssistantIntruction.title') }}
+                            </a>
+                        </li>
+                    @endcan
                 </ul>
             </li>
         @endcan
