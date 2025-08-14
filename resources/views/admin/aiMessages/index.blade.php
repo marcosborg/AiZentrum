@@ -29,6 +29,9 @@
                             {{ trans('cruds.aiMessage.fields.client') }}
                         </th>
                         <th>
+                            ZCM client ID
+                        </th>
+                        <th>
                             {{ trans('cruds.aiMessage.fields.parent') }}
                         </th>
                         <th>
@@ -68,6 +71,9 @@
                             </td>
                             <td>
                                 {{ $aiMessage->id ?? '' }}
+                            </td>
+                            <td>
+                                {{ $aiMessage->client_name ?? '' }}
                             </td>
                             <td>
                                 {{ $aiMessage->client ?? '' }}

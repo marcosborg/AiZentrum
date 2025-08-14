@@ -25,31 +25,49 @@ class AiMessageController extends Controller
         return view('admin.aiMessages.index', compact('aiMessages'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         abort_if(Gate::denies('ai_message_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $parents = AiMessage::pluck('client', 'id')->prepend(trans('global.pleaseSelect'), '');
-
         $users = User::pluck('name', 'id')->prepend(trans('global.pleaseSelect'), '');
 
-        return view('admin.aiMessages.create', compact('parents', 'users'));
+        $ai_message_id = (int) $request->query('ai_message_id', 0);
+        $ai_message    = $ai_message_id ? AiMessage::find($ai_message_id) : null;
+
+        // Thread = ID do cliente ZCM (vem em ?client=)
+        $threadId = $request->query('client')
+            ?? old('client')
+            ?? ($ai_message ? $ai_message->client : null);
+
+        $history = collect();
+        if (!empty($threadId)) {
+            $history = AiMessage::with('user')
+                ->where('client', $threadId)
+                ->orderBy('created_at', 'asc')
+                ->get(['id', 'context', 'ai_response', 'user_id', 'created_at']);
+        }
+
+        return view('admin.aiMessages.create', compact('users', 'ai_message_id', 'ai_message', 'history', 'threadId'));
     }
+
 
     public function store(StoreAiMessageRequest $request)
     {
-        // Cria o registo
-        $aiMessage = AiMessage::create($request->all());
+        abort_if(Gate::denies('ai_message_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        // Gera resposta da AI
-        $response = app(ChatGptService::class)->generateAiResponse($aiMessage);
+        $data = $request->all();
 
-        // Atualiza com a resposta da AI
-        $aiMessage->update([
-            'ai_response' => $response
-        ]);
+        // NÃO forçar parent_id = client (parent_id é FK para ai_messages.id)
+        if (empty($data['user_id']) && auth()->check()) {
+            $data['user_id'] = auth()->id();
+        }
 
-        // Redireciona para edição já com resposta preenchida
+        $aiMessage = AiMessage::create($data);
+
+        $response = app(\App\Services\ChatGptService::class)->generateAiResponse($aiMessage);
+
+        $aiMessage->update(['ai_response' => $response]);
+
         return redirect()->route('admin.ai-messages.edit', $aiMessage->id);
     }
 
@@ -57,21 +75,40 @@ class AiMessageController extends Controller
     {
         abort_if(Gate::denies('ai_message_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $parents = AiMessage::pluck('client', 'id')->prepend(trans('global.pleaseSelect'), '');
-
         $users = User::pluck('name', 'id')->prepend(trans('global.pleaseSelect'), '');
 
-        $aiMessage->load('parent', 'user');
+        $threadId = $aiMessage->client;
+        $history = AiMessage::with('user')
+            ->where('client', $threadId)
+            ->orderBy('created_at', 'asc')
+            ->get(['id', 'context', 'ai_response', 'user_id', 'created_at']);
 
-        return view('admin.aiMessages.edit', compact('aiMessage', 'parents', 'users'));
+        return view('admin.aiMessages.edit', compact('aiMessage', 'users', 'history', 'threadId'));
     }
 
     public function update(UpdateAiMessageRequest $request, AiMessage $aiMessage)
     {
+        abort_if(Gate::denies('ai_message_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        // 1) Guardar alterações do formulário
         $aiMessage->update($request->all());
 
-        return redirect()->route('admin.ai-messages.index');
+        // 2) Garantir que temos os dados e relações atualizados
+        $aiMessage->refresh()->load('user');
+
+        // 3) Regenerar SEMPRE a resposta da AI (com histórico por client)
+        $response = app(\App\Services\ChatGptService::class)->generateAiResponse($aiMessage);
+
+        // 4) Atualizar o registo com a nova resposta
+        $aiMessage->update(['ai_response' => $response]);
+
+        // 5) Voltar para a edição (mostrando a nova resposta)
+        return redirect()
+            ->route('admin.ai-messages.edit', $aiMessage->id)
+            ->with('status', 'Registo atualizado e resposta da AI regenerada.');
     }
+
+
 
     public function show(AiMessage $aiMessage)
     {

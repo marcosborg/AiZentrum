@@ -28,6 +28,14 @@
                             {{ trans('cruds.aiMessage.fields.client') }}
                         </th>
                         <td>
+                            {{ $aiMessage->client_name }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                            ZCM client ID
+                        </th>
+                        <td>
                             {{ $aiMessage->client }}
                         </td>
                     </tr>
@@ -106,8 +114,8 @@
                 </tbody>
             </table>
             <div class="form-group">
-                <a class="btn btn-default" href="{{ route('admin.ai-messages.index') }}">
-                    {{ trans('global.back_to_list') }}
+                <a class="btn btn-default" href="{{ route('admin.ai-messages.create', ['ai_message_id' => $aiMessage->id]) }}">
+                    Criar nova resposta
                 </a>
             </div>
         </div>
