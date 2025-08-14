@@ -107,7 +107,7 @@
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                 <div class="modal-header bg-warning">
-                    <h5 class="modal-title" id="termsModalLabel">Condições de Utilização do Chat</h5>
+                    <p id="termsModalLabel">Condições de utilização de Chat</p>
                 </div>
                 <div class="modal-body">
                     <p>
