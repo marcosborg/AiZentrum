@@ -102,6 +102,34 @@
         </div>
     </div>
 
+    <!-- Modal Condições de Utilização -->
+    <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+        <div class="modal-header bg-warning">
+            <h5 class="modal-title" id="termsModalLabel">Condições de Utilização do Chat</h5>
+        </div>
+        <div class="modal-body">
+            <p>
+            Este chat é controlado por uma Inteligência Artificial (IA) e destina-se a auxiliar com informações gerais.
+            Apesar de todos os esforços para garantir a precisão, as respostas podem conter erros ou imprecisões.
+            </p>
+            <p>
+            Ao utilizar este chat, concorda que as informações fornecidas não substituem aconselhamento profissional e
+            que podem ser sujeitas a falhas técnicas ou interpretações incorretas.
+            </p>
+            <p>
+            Se concordar, clique em "Aceito" para continuar.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" id="acceptTerms" class="btn btn-primary">Aceito</button>
+        </div>
+        </div>
+    </div>
+    </div>
+
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous">
     </script>
@@ -480,6 +508,29 @@
                 console.log(error);
             }
         }
+        $(() => {
+            // Verifica se já aceitou os termos
+            if (!localStorage.getItem('chat_terms_accepted')) {
+                $('#termsModal').modal({
+                    backdrop: 'static',
+                    keyboard: false
+                }).modal('show');
+            }
+
+            $('#acceptTerms').on('click', function() {
+                localStorage.setItem('chat_terms_accepted', 'true');
+                $('#termsModal').modal('hide');
+            });
+
+            // Bloqueia envio de mensagens se não aceitou
+            $('#message-textarea').on('keypress', function(e) {
+                if (!localStorage.getItem('chat_terms_accepted')) {
+                    e.preventDefault();
+                    $('#termsModal').modal('show');
+                }
+            });
+        });
+
     </script>
 
 </body>
