@@ -110,9 +110,7 @@
                     <p id="termsModalLabel">Condições de utilização de Chat</p>
                 </div>
                 <div class="modal-body">
-                    <p>
-                    Este chat é controlado por uma Inteligência Artificial (IA). As informações fornecidas não possuem caráter vinculativo.
-                    </p>
+                    <p><a href="https://techniczentrum.com/pt/content/35-sobre-a-utilizacao-do-nosso-chat-de-apoio" target="_new">Condições de utilização</a></p>
                     <p>
                     Se concordar, clique em "Aceito" para continuar.
                     </p>
