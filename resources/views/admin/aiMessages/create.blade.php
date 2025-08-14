@@ -7,6 +7,11 @@
         </div>
 
         <div class="card-body">
+            {{-- Mensagem de sucesso (opcional) --}}
+            @if(session('status'))
+                <div class="alert alert-success">{{ session('status') }}</div>
+            @endif
+
             <form method="POST" action="{{ route('admin.ai-messages.store') }}" enctype="multipart/form-data">
                 @csrf
 
@@ -66,7 +71,7 @@
                     <div class="col-md-3">
                         <div class="alert alert-info" role="alert" style="margin-top: 2rem;">
                             <strong>Thread:</strong>
-                            <span class="ml-1">{{ $threadId ?? '—' }}</span>
+                            <span id="thread_label" class="ml-1">{{ $threadId ?? '—' }}</span>
                         </div>
                     </div>
                 </div>
@@ -130,11 +135,11 @@
                     </div>
                 </div>
 
-                {{-- Histórico --}}
+                {{-- Histórico (render inicial do servidor OU placeholder para AJAX) --}}
                 @if (isset($history) && $history->isNotEmpty())
-                    <div class="card mb-3">
+                    <div id="history_card" class="card mb-3">
                         <div class="card-header">Histórico do cliente</div>
-                        <div class="card-body" style="max-height: 400px; overflow:auto;">
+                        <div id="history_body" class="card-body" style="max-height: 400px; overflow:auto;">
                             @foreach ($history as $m)
                                 @if ($m->context)
                                     <div class="mb-2">
@@ -151,6 +156,11 @@
                                 @endif
                             @endforeach
                         </div>
+                    </div>
+                @else
+                    <div id="history_card" class="card mb-3 d-none">
+                        <div class="card-header">Histórico do cliente</div>
+                        <div id="history_body" class="card-body" style="max-height: 400px; overflow:auto;"></div>
                     </div>
                 @endif
 
@@ -266,17 +276,56 @@
     @parent
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script>
+        // Helpers para render do histórico
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;');
+        }
+
+        function renderHistory(items) {
+            var $card = $('#history_card');
+            var $body = $('#history_body');
+
+            if (!items || !items.length) {
+                $body.html('<em>Sem histórico para este cliente.</em>');
+                $card.removeClass('d-none');
+                return;
+            }
+
+            var html = '';
+            items.forEach(function(m) {
+                if (m.context) {
+                    html += '<div class="mb-2">';
+                    html += '<strong>Cliente:</strong>';
+                    html += '<div class="border rounded p-2">' + escapeHtml(m.context) + '</div>';
+                    html += '<small class="text-muted">' + (m.created_at || '') + '</small>';
+                    html += '</div>';
+                }
+                if (m.ai_response) {
+                    html += '<div class="mb-3">';
+                    html += '<strong>Assistente:</strong>';
+                    html += '<div class="border rounded bg-light p-2">' + escapeHtml(m.ai_response) + '</div>';
+                    html += '</div>';
+                }
+            });
+
+            $body.html(html);
+            $card.removeClass('d-none');
+        }
+
         $(document).ready(function() {
             // CSRF para AJAX
             $.ajaxSetup({
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
             });
 
-            // Autocomplete (rota que criaste no controller: search)
+            // Autocomplete (rotas dentro do grupo admin)
             $('#client_search').autocomplete({
                 source: function(request, response) {
                     $.ajax({
-                        url: '{{ route('ai-messages.search') }}', // ajusta se a tua rota tiver prefixo admin
+                        url: '{{ route('admin.ai-messages.search') }}',
                         method: 'POST',
                         data: { term: request.term },
                         success: function(data) {
@@ -306,8 +355,23 @@
                         $('#context').val(ui.item.context);
                     }
 
-                    // Recarrega para carregar histórico no servidor
-                    window.location = '{{ route('admin.ai-messages.create') }}?client=' + ui.item.id;
+                    // Atualiza indicador de thread
+                    $('#thread_label').text(ui.item.id);
+
+                    // Busca histórico por AJAX (sem refresh)
+                    $.ajax({
+                        url: '{{ route('admin.ai-messages.history') }}',
+                        method: 'POST',
+                        data: { client: ui.item.id },
+                        success: function(items) {
+                            renderHistory(items);
+                        },
+                        error: function() {
+                            renderHistory([]);
+                        }
+                    });
+
+                    return false; // evita comportamento default
                 }
             });
         });

@@ -114,10 +114,24 @@ class AiMessageController extends Controller
     {
         abort_if(Gate::denies('ai_message_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $aiMessage->load('parent', 'user');
+        // Thread = id cliente ZCM
+        $threadId = $aiMessage->client;
 
-        return view('admin.aiMessages.show', compact('aiMessage'));
+        // Histórico completo desta thread (cliente), do mais antigo para o mais recente
+        $history = AiMessage::with('user')
+            ->where('client', $threadId)
+            ->orderBy('created_at', 'asc')
+            ->get([
+                'id',
+                'context',
+                'ai_response',
+                'user_id',
+                'created_at'
+            ]);
+
+        return view('admin.aiMessages.show', compact('aiMessage', 'history', 'threadId'));
     }
+
 
     public function destroy(AiMessage $aiMessage)
     {
@@ -175,5 +189,21 @@ class AiMessageController extends Controller
         }
 
         return response()->json([]);
+    }
+
+    // App\Http\Controllers\Admin\AiMessageController.php
+    public function history(Request $request)
+    {
+        $threadId = $request->input('client');
+        if (!$threadId) {
+            return response()->json([]);
+        }
+
+        $history = AiMessage::where('client', $threadId)
+            ->orderBy('created_at', 'asc')
+            ->get(['context', 'ai_response', 'created_at']);
+
+        // devolvemos JSON simples; o front trata de renderizar
+        return response()->json($history);
     }
 }
