@@ -111,7 +111,7 @@
                 </div>
                 <div class="modal-body">
                     <p>
-                    Este chat é controlado por uma Inteligência Artificial (IA). As informações fornecidas não substituem aconselhamento profissional.
+                    Este chat é controlado por uma Inteligência Artificial (IA). As informações fornecidas não possuem caráter vinculativo.
                     </p>
                     <p>
                     Se concordar, clique em "Aceito" para continuar.
