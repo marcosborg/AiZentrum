@@ -100,7 +100,7 @@ class ChatGptService
         // Pedido final orientado à ação
         $messages[] = [
             'role'    => 'user',
-            'content' => "Responde como gestor da empresa, mantendo tom cordial. Indica solução clara, próximos passos com responsáveis e prazos. Se necessário, pede dados em falta."
+            'content' => "Responde como gestor de cliente, mantendo tom cordial. Indica solução clara, próximos passos com responsáveis e prazos. Se necessário, pede dados em falta. Portugues de Portugal."
         ];
 
         try {
