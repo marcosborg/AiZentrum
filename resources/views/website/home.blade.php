@@ -111,12 +111,7 @@
                 </div>
                 <div class="modal-body">
                     <p>
-                    Este chat é controlado por uma Inteligência Artificial (IA) e destina-se a auxiliar com informações gerais.
-                    Apesar de todos os esforços para garantir a precisão, as respostas podem conter erros ou imprecisões.
-                    </p>
-                    <p>
-                    Ao utilizar este chat, concorda que as informações fornecidas não substituem aconselhamento profissional e
-                    que podem ser sujeitas a falhas técnicas ou interpretações incorretas.
+                    Este chat é controlado por uma Inteligência Artificial (IA). As informações fornecidas não substituem aconselhamento profissional.
                     </p>
                     <p>
                     Se concordar, clique em "Aceito" para continuar.
