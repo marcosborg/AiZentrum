@@ -32,9 +32,6 @@
                             ZCM client ID
                         </th>
                         <th>
-                            {{ trans('cruds.aiMessage.fields.parent') }}
-                        </th>
-                        <th>
                             {{ trans('cruds.aiMessage.fields.email') }}
                         </th>
                         <th>
@@ -42,12 +39,6 @@
                         </th>
                         <th>
                             {{ trans('cruds.aiMessage.fields.user') }}
-                        </th>
-                        <th>
-                            {{ trans('cruds.aiMessage.fields.context') }}
-                        </th>
-                        <th>
-                            {{ trans('cruds.aiMessage.fields.ai_response') }}
                         </th>
                         <th>
                             {{ trans('cruds.aiMessage.fields.conflict_type') }}
@@ -79,9 +70,6 @@
                                 {{ $aiMessage->client ?? '' }}
                             </td>
                             <td>
-                                {{ $aiMessage->parent->client ?? '' }}
-                            </td>
-                            <td>
                                 {{ $aiMessage->email ?? '' }}
                             </td>
                             <td>
@@ -89,12 +77,6 @@
                             </td>
                             <td>
                                 {{ $aiMessage->user->name ?? '' }}
-                            </td>
-                            <td>
-                                {{ $aiMessage->context ?? '' }}
-                            </td>
-                            <td>
-                                {{ $aiMessage->ai_response ?? '' }}
                             </td>
                             <td>
                                 {{ App\Models\AiMessage::CONFLICT_TYPE_RADIO[$aiMessage->conflict_type] ?? '' }}

@@ -23,7 +23,7 @@ class AiMessageController extends Controller
     {
         abort_if(Gate::denies('ai_message_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $aiMessages = AiMessage::with(['parent', 'user'])->get();
+        $aiMessages = AiMessage::with(['user'])->get();
 
         return view('admin.aiMessages.index', compact('aiMessages'));
     }
@@ -93,25 +93,28 @@ class AiMessageController extends Controller
     {
         abort_if(Gate::denies('ai_message_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        // 1) Guardar alterações do formulário
-        $aiMessage->update($request->all());
+        $willResolveThread = $request->boolean('resolved');
 
-        // 2) Garantir que temos os dados e relações atualizados
+        // 🌟 Se for para resolver, não mexemos em mais nada:
+        if ($willResolveThread && $aiMessage->client) {
+            AiMessage::where('client', $aiMessage->client)->update(['resolved' => true]);
+
+            return redirect()
+                ->route('admin.ai-messages.index')
+                ->with('status', 'Thread marcada como resolvida. Não foi gerada nova resposta da AI.');
+        }
+
+        // Caso contrário, segue o fluxo normal de update + regeneração
+        $aiMessage->update($request->all());
         $aiMessage->refresh()->load('user');
 
-        // 3) Regenerar SEMPRE a resposta da AI (com histórico por client)
         $response = app(\App\Services\ChatGptService::class)->generateAiResponse($aiMessage);
-
-        // 4) Atualizar o registo com a nova resposta
         $aiMessage->update(['ai_response' => $response]);
 
-        // 5) Voltar para a edição (mostrando a nova resposta)
         return redirect()
             ->route('admin.ai-messages.edit', $aiMessage->id)
             ->with('status', 'Registo atualizado e resposta da AI regenerada.');
     }
-
-
 
     public function show(AiMessage $aiMessage)
     {
@@ -247,5 +250,18 @@ class AiMessageController extends Controller
             ->get(['id', 'name', 'instructions']);
 
         return response()->json($list);
+    }
+
+    private function resolveThread(Request $request)
+    {
+
+        $threadId = $request->input('client');
+        if (!$threadId) {
+            return back()->with('error', 'Thread inválida.');
+        }
+
+        AiMessage::where('client', $threadId)->update(['resolved' => true]);
+
+        return back()->with('status', 'Toda a thread foi marcada como resolvida.');
     }
 }

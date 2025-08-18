@@ -29,7 +29,6 @@ class AiMessage extends Model
     protected $fillable = [
         'client',
         'client_name', // novo campo
-        'parent_id',
         'email',
         'nif',
         'user_id',
@@ -56,11 +55,6 @@ class AiMessage extends Model
     protected function serializeDate(DateTimeInterface $date)
     {
         return $date->format('Y-m-d H:i:s');
-    }
-
-    public function parent()
-    {
-        return $this->belongsTo(self::class, 'parent_id');
     }
 
     public function user()
