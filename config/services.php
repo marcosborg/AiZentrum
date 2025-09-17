@@ -40,5 +40,8 @@ return [
     'openai' => [
         'key' => env('OPENAI_API_KEY'),
     ],
-
+    'ps' => [
+        'url' => env('PS_API_URL', 'https://techniczentrum.com/api'),
+        'key' => env('PS_API_KEY', 'U7J6Y3I3N4D6W8V9T0P5A2R1E3S4X6C7'),
+    ],
 ];

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\RefSearchController;
+
 Route::post('login', 'Api\\AuthController@login');
 
 Route::group(['middleware' => ['auth:sanctum']], function () {
@@ -35,3 +37,5 @@ Route::post('/assistant', 'Api\\AIController@handle');
 
 Route::post('/chat', 'Api\\TechnicalAssistanteController@responder');
 Route::post('/chat/reset', 'Api\\TechnicalAssistanteController@resetChat');
+
+Route::get('/ref-search', [RefSearchController::class, 'index']);
