@@ -15,7 +15,7 @@
         <div class="mt-4">
             @if ($form->logo)
             <div class="logo text-center">
-                <img src="{{ $form->logo->getUrl() }}" class="img-thumbnail" style="max-width: 200px;">
+                <img src="https://ai.airbagszentrum.com/public/images/logo-black.png" class="img-thumbnail" style="max-width: 200px;">
             </div>
             @endif
             <div class="card mt-4 mb-5">
@@ -144,84 +144,117 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/gasparesganga-jquery-loading-overlay@2.1.7/dist/loadingoverlay.min.js">
     </script>
-    <script>
-        submitForm = () => {
-            const form_id = {{ $form->id }};
-            var fields = $('.form-field');
-            let formData = new FormData(); // Usando FormData para lidar com os dados do formulário, incluindo arquivos
-            let validation = '';
-            fields.each((i, v) => {
-                let label = $(v).data('label');
-                let value = $(v).val();
-                let name = $(v).attr('name');
-                let type = $(v).data('type');
-                let required = $(v).data('required');
-                if(required == true && value == ''){
-                    validation += '<p>O campo "' + label + '" é obrigatório.</p>';
-                }
-                if(type == 'file') { // Tratamento especial para campos do tipo 'file'
-                    let fileInput = $(v)[0];
-                    if(fileInput.files.length > 0) {
-                        formData.append(name, fileInput.files[0]); // Adiciona o arquivo ao FormData
-                    }
-                } else if(type == 'checkbox') {
-                    formData.append(name, $(v).is(':checked')); // Trata checkboxes
-                } else if(type == 'radio') {
-                    if($(v).is(':checked')){
-                        let id = $(v).attr('id');
-                        formData.append(name, value);
-                    }
-                } else {
-                    formData.append(name, value); // Adiciona outros tipos de campo ao FormData
-                }
-            });
+  <script>
+    submitForm = () => {
+        const form_id = {{ $form->id }};
+        var fields = $('.form-field');
+        let formData = new FormData();
+        let validation = '';
 
-            formData.append('form_id', form_id); // Adiciona o ID do formulário ao FormData
+        // 1) Marcar o último checkbox como "Termos" obrigatório
+        const $allCheckboxes = $('.form-field[data-type="checkbox"]');
+        if ($allCheckboxes.length > 0) {
+            const $terms = $allCheckboxes.last();
 
-            if(validation !== ''){
-                Swal.fire({
-                    title: "Faltam dados!",
-                    html: validation,
-                    icon: "error"
-                });
-            } else {
-                $.LoadingOverlay('show');
-                $.ajax({
-                    url: '/form/form-send',
-                    type: 'POST',
-                    data: formData,
-                    processData: false, // Impede que o jQuery processe os dados
-                    contentType: false, // Impede que o jQuery defina o tipo de conteúdo
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                    },
-                    success: (resp) => {
-                        $.LoadingOverlay('hide');
-                        console.log(resp);
-                        Swal.fire({
-                            title: "Sucesso!",
-                            text: "Formulário enviado!",
-                            icon: "success"
-                        }).then(() => {
-                            location.reload();
-                        });
-                    },
-                    error: (error) => {
-                        $.LoadingOverlay('hide');
-                        console.log(error);
-                        Swal.fire({
-                            title: "Sucesso!",
-                            text: "Formulário enviado!",
-                            icon: "success"
-                        }).then(() => {
-                            location.reload();
-                        });
-                    }
-                });
+            // marca como obrigatório
+            $terms.data('required', true);
+
+            // adicionar * ao label, se ainda não tiver
+            const termsId = $terms.attr('id');
+            const $termsLabel = $('label[for="'+termsId+'"]');
+            if ($termsLabel.length && !$termsLabel.text().trim().endsWith('*')) {
+                $termsLabel.text($termsLabel.text().trim() + ' *');
+            }
+
+            // validação explícita dos termos
+            if (!$terms.is(':checked')) {
+                validation += '<p>Tem de aceitar os termos e condições.</p>';
             }
         }
 
-    </script>
+        // 2) Recolha + validação genérica
+        fields.each((i, v) => {
+            let label = $(v).data('label');
+            let value = $(v).val();
+            let name = $(v).attr('name');
+            let type = $(v).data('type');
+            let required = $(v).data('required');
+
+            if (required === true) {
+                // checkboxes e radios não usam .val() para "vazio"
+                if (type === 'checkbox' && !$(v).is(':checked')) {
+                    validation += '<p>O campo "' + label + '" é obrigatório.</p>';
+                } else if (type === 'radio') {
+                    // garante que pelo menos um radio com o mesmo name foi escolhido
+                    if ($('input[name="'+name+'"]:checked').length === 0) {
+                        validation += '<p>O campo "' + label + '" é obrigatório.</p>';
+                    }
+                } else if (value === '' || value === null) {
+                    validation += '<p>O campo "' + label + '" é obrigatório.</p>';
+                }
+            }
+
+            // anexos/ficheiros
+            if (type === 'file') {
+                let fileInput = $(v)[0];
+                if (fileInput.files.length > 0) {
+                    formData.append(name, fileInput.files[0]);
+                }
+            } else if (type === 'checkbox') {
+                formData.append(name, $(v).is(':checked'));
+            } else if (type === 'radio') {
+                if ($(v).is(':checked')) {
+                    formData.append(name, value);
+                }
+            } else {
+                formData.append(name, value);
+            }
+        });
+
+        formData.append('form_id', form_id);
+
+        if (validation !== '') {
+            Swal.fire({
+                title: "Faltam dados!",
+                html: validation,
+                icon: "error"
+            });
+            return; // impede envio
+        }
+
+        $.LoadingOverlay('show');
+        $.ajax({
+            url: '/form/form-send',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: (resp) => {
+                $.LoadingOverlay('hide');
+                Swal.fire({
+                    title: "Sucesso!",
+                    text: "Formulário enviado!",
+                    icon: "success"
+                }).then(() => {
+                    location.reload();
+                });
+            },
+            error: (error) => {
+                $.LoadingOverlay('hide');
+                console.log(error);
+                Swal.fire({
+                    title: "Erro!",
+                    text: "Não foi possível enviar o formulário.",
+                    icon: "error"
+                });
+            }
+        });
+    }
+</script>
+  
 </body>
 
 </html>

@@ -8,7 +8,7 @@
     </div>
     <div class="card-body" style="background: #eeeeee;">
         @if ($form && $form->logo)
-        <img src="{{ $form->logo->getUrl() }}" class="img-thumbnail mb-4" width="100">
+        <img src="https://ai.airbagszentrum.com/public/images/logo-black.png" class="img-thumbnail mb-4" width="100">
         @endif
         @if ($form->form_fields->count() == 0)
         <div class="alert alert-primary" role="alert">
