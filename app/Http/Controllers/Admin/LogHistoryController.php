@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 use App\Models\Log;
 use App\Models\LogMessage;
 
+
 class LogHistoryController extends Controller
 {
     public function index()

@@ -1,6 +1,7 @@
 @extends('layouts.admin')
 @section('content')
 
+
 <div class="card">
     <div class="card-header">
         {{ trans('cruds.logHistory.title') }}
