@@ -10,16 +10,49 @@ use App\Models\Log;
 use Gate;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Yajra\DataTables\Facades\DataTables;
 
 class LogController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         abort_if(Gate::denies('log_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $logs = Log::all();
+        if ($request->ajax()) {
+            $query = Log::query()->select(sprintf('%s.*', (new Log)->table));
+            $table = Datatables::of($query);
 
-        return view('admin.logs.index', compact('logs'));
+            $table->addColumn('placeholder', '&nbsp;');
+            $table->addColumn('actions', '&nbsp;');
+
+            $table->editColumn('actions', function ($row) {
+                $viewGate      = 'log_show';
+                $editGate      = 'log_edit';
+                $deleteGate    = 'log_delete';
+                $crudRoutePart = 'logs';
+
+                return view('partials.datatablesActions', compact(
+                    'viewGate',
+                    'editGate',
+                    'deleteGate',
+                    'crudRoutePart',
+                    'row'
+                ));
+            });
+
+            $table->editColumn('id', function ($row) {
+                return $row->id ? $row->id : '';
+            });
+            $table->editColumn('project', function ($row) {
+                return $row->project ? $row->project : '';
+            });
+
+            $table->rawColumns(['actions', 'placeholder']);
+
+            return $table->make(true);
+        }
+
+        return view('admin.logs.index');
     }
 
     public function create()
