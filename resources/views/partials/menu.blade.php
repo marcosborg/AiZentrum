@@ -211,7 +211,7 @@
                 </ul>
                 @can('zcm_access')
                         <li class="c-sidebar-nav-item">
-                            <a href="{{ route("admin.zcms.index") }}" class="c-sidebar-nav-link {{ request()->is("admin/zcms") || request()->is("admin/zcms/*") ? "c-active" : "" }}">
+                            <a href="/admin/zcm/dashboard" class="c-sidebar-nav-link {{ request()->is("admin/zcms") || request()->is("admin/zcm/*") ? "c-active" : "" }}">
                                 <i class="fa-fw fas fa-comments c-sidebar-nav-icon">
 
                                 </i>

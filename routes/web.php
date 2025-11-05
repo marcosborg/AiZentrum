@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\MoloniSuplierInvoiceController;
+use App\Http\Controllers\Admin\ZcmDashboardController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
 
@@ -121,14 +122,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
         Route::get('/{form_data_id}', 'FormsInboxController@form')->name('forms-inboxes.form');
     });
 
-    // Zcm
-    Route::prefix('zcms')->group(function () {
-        Route::get('/', 'ZcmController@index')->name('zcms.index');
-        Route::post('orders', 'ZcmController@orders');
-        Route::post('create-run', 'ZcmController@createRun');
-        Route::post('ai-chat', 'ZcmController@aiChat');
-    });
-
     // Bot
     Route::delete('bots/destroy', 'BotController@massDestroy')->name('bots.massDestroy');
     Route::resource('bots', 'BotController');
@@ -156,7 +149,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     // Resource
     Route::resource('ai-messages', 'AiMessageController');
 
-
     // Technical Assistante Session
     Route::delete('technical-assistante-sessions/destroy', 'TechnicalAssistanteSessionController@massDestroy')->name('technical-assistante-sessions.massDestroy');
     Route::resource('technical-assistante-sessions', 'TechnicalAssistanteSessionController');
@@ -181,6 +173,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
 
     Route::get('ai-messages/assistant/instructions', 'AiMessageController@assistantInstructions')
         ->name('ai-messages.assistant.instructions');
+
+    Route::get('/zcm/dashboard', ZcmDashboardController::class)->name('zcm.dashboard');
 });
 
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
