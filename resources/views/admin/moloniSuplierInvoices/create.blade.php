@@ -77,7 +77,7 @@
     url: '{{ route('admin.moloni-suplier-invoices.storeMedia') }}',
     maxFilesize: 5, // MB
     acceptedFiles: '.jpeg,.jpg,.png,.gif',
-    maxFiles: 1,
+    maxFiles: 10,
     addRemoveLinks: true,
     headers: {
       'X-CSRF-TOKEN': "{{ csrf_token() }}"
@@ -88,14 +88,13 @@
       height: 4096
     },
     success: function (file, response) {
-      $('form').find('input[name="photo"]').remove()
-      $('form').append('<input type="hidden" name="photo" value="' + response.name + '">')
+      file.uploadedName = response.name
+      $('form').append('<input type="hidden" name="photos[]" value="' + response.name + '">')
     },
     removedfile: function (file) {
       file.previewElement.remove()
-      if (file.status !== 'error') {
-        $('form').find('input[name="photo"]').remove()
-        this.options.maxFiles = this.options.maxFiles + 1
+      if (file.status !== 'error' && file.uploadedName) {
+        $('form').find('input[name="photos[]"][value="' + file.uploadedName + '"]').remove()
       }
     },
     init: function () {
@@ -104,7 +103,8 @@
           this.options.addedfile.call(this, file)
       this.options.thumbnail.call(this, file, file.preview ?? file.preview_url)
       file.previewElement.classList.add('dz-complete')
-      $('form').append('<input type="hidden" name="photo" value="' + file.file_name + '">')
+      file.uploadedName = file.file_name
+      $('form').append('<input type="hidden" name="photos[]" value="' + file.file_name + '">')
       this.options.maxFiles = this.options.maxFiles - 1
 @endif
     },

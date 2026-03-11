@@ -36,11 +36,11 @@
                             {{ trans('cruds.moloniSuplierInvoice.fields.photo') }}
                         </th>
                         <td>
-                            @if($moloniSuplierInvoice->photo)
-                                <a href="{{ $moloniSuplierInvoice->photo->getUrl() }}" target="_blank" style="display: inline-block">
-                                    <img src="{{ $moloniSuplierInvoice->photo->getUrl('thumb') }}">
+                            @foreach($moloniSuplierInvoice->photos as $photo)
+                                <a href="{{ $photo->getUrl() }}" target="_blank" style="display: inline-block; margin-right: 6px;">
+                                    <img src="{{ $photo->getUrl('thumb') }}">
                                 </a>
-                            @endif
+                            @endforeach
                         </td>
                     </tr>
                     <tr>

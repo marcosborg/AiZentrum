@@ -39,9 +39,8 @@
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <!-- Trigger da imagem -->
-                    @if($moloniSuplierInvoice->photo)
-                        <img src="{{ $moloniSuplierInvoice->photo->getUrl() }}" class="img-thumbnail" style="cursor:pointer;" data-toggle="modal" data-target="#imageModal">
+                    @if($moloniSuplierInvoice->photos->count())
+                        <img src="{{ $moloniSuplierInvoice->photos->first()->getUrl() }}" class="img-thumbnail" style="cursor:pointer;" data-toggle="modal" data-target="#imageModal">
                     @endif
                 </div>
             </div>
@@ -75,22 +74,22 @@
             </div>
         </form>
         <a href="{{ route('admin.moloni-suplier-invoices.launch', [$moloniSuplierInvoice->id]) }}" class="btn btn-success">
-            <i class="fas fa-paper-plane"></i> Lançar no Moloni
+            <i class="fas fa-paper-plane"></i> Lancar no Moloni
         </a>
     </div>
 </div>
 
-<!-- Modal de visualização da imagem -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-body p-0">
-        <img src="{{ $moloniSuplierInvoice->photo->getUrl() }}" class="img-fluid w-100" alt="Fatura">
+        @foreach($moloniSuplierInvoice->photos as $photo)
+            <img src="{{ $photo->getUrl() }}" class="img-fluid w-100 mb-2" alt="Fatura">
+        @endforeach
       </div>
     </div>
   </div>
 </div>
-
 
 @endsection
 
@@ -99,9 +98,9 @@
 <script>
     Dropzone.options.photoDropzone = {
     url: '{{ route('admin.moloni-suplier-invoices.storeMedia') }}',
-    maxFilesize: 5, // MB
+    maxFilesize: 5,
     acceptedFiles: '.jpeg,.jpg,.png,.gif',
-    maxFiles: 1,
+    maxFiles: 10,
     addRemoveLinks: true,
     headers: {
       'X-CSRF-TOKEN': "{{ csrf_token() }}"
@@ -112,29 +111,33 @@
       height: 4096
     },
     success: function (file, response) {
-      $('form').find('input[name="photo"]').remove()
-      $('form').append('<input type="hidden" name="photo" value="' + response.name + '">')
+      file.uploadedName = response.name
+      $('form').append('<input type="hidden" name="photos[]" value="' + response.name + '">')
     },
     removedfile: function (file) {
       file.previewElement.remove()
-      if (file.status !== 'error') {
-        $('form').find('input[name="photo"]').remove()
-        this.options.maxFiles = this.options.maxFiles + 1
+      var name = file.uploadedName || file.file_name
+      if (file.status !== 'error' && name) {
+        $('form').find('input[name="photos[]"][value="' + name + '"]').remove()
       }
     },
     init: function () {
-@if(isset($moloniSuplierInvoice) && $moloniSuplierInvoice->photo)
-      var file = {!! json_encode($moloniSuplierInvoice->photo) !!}
-          this.options.addedfile.call(this, file)
-      this.options.thumbnail.call(this, file, file.preview ?? file.preview_url)
-      file.previewElement.classList.add('dz-complete')
-      $('form').append('<input type="hidden" name="photo" value="' + file.file_name + '">')
-      this.options.maxFiles = this.options.maxFiles - 1
+@if(isset($moloniSuplierInvoice) && $moloniSuplierInvoice->photos->count())
+      var files = {!! json_encode($moloniSuplierInvoice->photos) !!}
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i]
+        this.options.addedfile.call(this, file)
+        this.options.thumbnail.call(this, file, file.preview ?? file.preview_url)
+        file.previewElement.classList.add('dz-complete')
+        file.uploadedName = file.file_name
+        $('form').append('<input type="hidden" name="photos[]" value="' + file.file_name + '">')
+        this.options.maxFiles = this.options.maxFiles - 1
+      }
 @endif
     },
     error: function (file, response) {
         if ($.type(response) === 'string') {
-            var message = response //dropzone sends it's own error messages in string
+            var message = response
         } else {
             var message = response.errors.file
         }

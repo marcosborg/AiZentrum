@@ -9,14 +9,13 @@ use App\Http\Requests\StoreMoloniSuplierInvoiceRequest;
 use App\Http\Requests\UpdateMoloniSuplierInvoiceRequest;
 use App\Models\MoloniSuplierInvoice;
 use App\Models\User;
+use App\Services\MoloniService;
 use Gate;
 use Illuminate\Http\Request;
+use OpenAI\Laravel\Facades\OpenAI;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
-use OpenAI\Laravel\Facades\OpenAI;
-use App\Services\MoloniService;
-use Illuminate\Support\Facades\Log;
 
 class MoloniSuplierInvoiceController extends Controller
 {
@@ -28,7 +27,7 @@ class MoloniSuplierInvoiceController extends Controller
 
         if ($request->ajax()) {
             $query = MoloniSuplierInvoice::with(['user'])->select(sprintf('%s.*', (new MoloniSuplierInvoice)->table));
-            $table = Datatables::of($query);
+            $table = DataTables::of($query);
 
             $table->addColumn('placeholder', '&nbsp;');
             $table->addColumn('actions', '&nbsp;');
@@ -49,25 +48,35 @@ class MoloniSuplierInvoiceController extends Controller
             });
 
             $table->editColumn('id', function ($row) {
-                return $row->id ? $row->id : '';
+                return $row->id ?: '';
             });
+
             $table->addColumn('user_name', function ($row) {
                 return $row->user ? $row->user->name : '';
             });
+
             $table->editColumn('photo', function ($row) {
-                if ($photo = $row->photo) {
-                    return sprintf(
-                        '<a href="%s" target="_blank"><img src="%s" width="50px" height="50px"></a>',
-                        $photo->url,
-                        $photo->thumbnail
-                    );
+                $photos = $row->getMedia('photo');
+                if ($photos->isEmpty()) {
+                    return '';
                 }
 
-                return '';
+                $first = $photos->first();
+                $count = $photos->count();
+                $badge = $count > 1 ? '<br><small>' . $count . ' pages</small>' : '';
+
+                return sprintf(
+                    '<a href="%s" target="_blank"><img src="%s" width="50px" height="50px"></a>%s',
+                    $first->getUrl(),
+                    $first->getUrl('thumb'),
+                    $badge
+                );
             });
+
             $table->editColumn('data', function ($row) {
-                return $row->data ? $row->data : '';
+                return $row->data ?: '';
             });
+
             $table->editColumn('handled', function ($row) {
                 return '<input type="checkbox" disabled ' . ($row->handled ? 'checked' : null) . '>';
             });
@@ -93,25 +102,18 @@ class MoloniSuplierInvoiceController extends Controller
     {
         $moloniSuplierInvoice = MoloniSuplierInvoice::create($request->all());
 
-        if ($request->input('photo', false)) {
-            $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('photo'))))->toMediaCollection('photo');
-        }
+        $photoNames = $this->extractPhotoNamesFromRequest($request);
+        $this->attachPhotosFromTmp($moloniSuplierInvoice, $photoNames);
 
         if ($media = $request->input('ck-media', false)) {
             Media::whereIn('id', $media)->update(['model_id' => $moloniSuplierInvoice->id]);
         }
 
-        // Obter a imagem da fatura
-        $photo = $moloniSuplierInvoice->photo;
-        if ($photo) {
-            // Gerar URL pública
-            $imageUrl = $photo->getUrl();
-
-            // Analisar a imagem com GPT-4o visão
-            $json = $this->analyzeInvoiceImage($imageUrl);
-
-            // Guardar o JSON no campo data
-            $moloniSuplierInvoice->update(['data' => json_encode($json)]);
+        $imageUrls = $this->getInvoiceImageUrls($moloniSuplierInvoice);
+        if (!empty($imageUrls)) {
+            $json = $this->analyzeInvoiceImage($imageUrls);
+            $normalizedJson = $this->normalizeInvoiceJson($json);
+            $moloniSuplierInvoice->update(['data' => json_encode($normalizedJson)]);
         }
 
         return redirect()->route('admin.moloni-suplier-invoices.edit', [$moloniSuplierInvoice->id]);
@@ -132,20 +134,12 @@ class MoloniSuplierInvoiceController extends Controller
     {
         $moloniSuplierInvoice->update($request->all());
 
-        if ($request->input('photo', false)) {
-            if (! $moloniSuplierInvoice->photo || $request->input('photo') !== $moloniSuplierInvoice->photo->file_name) {
-                if ($moloniSuplierInvoice->photo) {
-                    $moloniSuplierInvoice->photo->delete();
-                }
-                $moloniSuplierInvoice->addMedia(storage_path('tmp/uploads/' . basename($request->input('photo'))))->toMediaCollection('photo');
-            }
-        } elseif ($moloniSuplierInvoice->photo && !$request->input('photo')) {
-            $moloniSuplierInvoice->photo->delete();
-        }
+        $photoNames = $this->extractPhotoNamesFromRequest($request);
+        $this->syncPhotos($moloniSuplierInvoice, $photoNames);
 
-        if ($moloniSuplierInvoice->photo) {
-            $imageUrl = $moloniSuplierInvoice->photo->getUrl();
-            $json = $this->analyzeInvoiceImage($imageUrl);
+        $imageUrls = $this->getInvoiceImageUrls($moloniSuplierInvoice);
+        if (!empty($imageUrls)) {
+            $json = $this->analyzeInvoiceImage($imageUrls);
             $normalizedJson = $this->normalizeInvoiceJson($json);
             $moloniSuplierInvoice->update(['data' => json_encode($normalizedJson)]);
         }
@@ -196,33 +190,24 @@ class MoloniSuplierInvoiceController extends Controller
 
     private function normalizeInvoiceJson(array $raw): array
     {
-        // Inicializa valores default
         $supplierName = 'DESCONHECIDO';
         $supplierNif = '';
 
         if (isset($raw['supplier'])) {
             $supplier = $raw['supplier'];
 
-            // supplier como string
             if (is_string($supplier)) {
                 $supplierName = $supplier;
-            }
-            // supplier como array
-            elseif (is_array($supplier)) {
-                // se supplier.name existe
+            } elseif (is_array($supplier)) {
                 if (isset($supplier['name'])) {
-                    // supplier.name como string
                     if (is_string($supplier['name'])) {
                         $supplierName = $supplier['name'];
-                    }
-                    // supplier.name como array (caso específico do teu dump)
-                    elseif (is_array($supplier['name'])) {
+                    } elseif (is_array($supplier['name'])) {
                         $supplierName = $supplier['name']['name'] ?? $supplierName;
                         $supplierNif = $supplier['name']['NIF'] ?? $supplierNif;
                     }
                 }
 
-                // supplier.NIF/Nif (fora do name)
                 if (isset($supplier['NIF'])) {
                     $supplierNif = $supplier['NIF'];
                 }
@@ -235,17 +220,14 @@ class MoloniSuplierInvoiceController extends Controller
         return [
             'invoice_date' => $raw['invoice_date'] ?? now()->toDateString(),
             'invoice_number' => $raw['invoice_number'] ?? 'SEM-NUMERO',
-
             'supplier' => [
                 'name' => $supplierName,
                 'NIF' => $supplierNif,
             ],
-
             'buyer' => [
                 'name' => 'AIRBAGS-ZENTRUM, LDA',
                 'NIF' => '508263069',
             ],
-
             'items' => collect($raw['items'] ?? [])->map(function ($item) {
                 return [
                     'description' => $item['description'] ?? '',
@@ -257,13 +239,11 @@ class MoloniSuplierInvoiceController extends Controller
                     'total' => (float) ($item['total'] ?? 0),
                 ];
             })->toArray(),
-
             'totals' => [
                 'subtotal' => (float) ($raw['totals']['subtotal'] ?? 0),
                 'tax' => (float) ($raw['totals']['tax'] ?? 0),
                 'total' => (float) ($raw['totals']['total'] ?? 0),
             ],
-
             'payment' => [
                 'terms' => $raw['payment']['terms'] ?? '30 dias',
             ],
@@ -272,37 +252,40 @@ class MoloniSuplierInvoiceController extends Controller
 
     function parseEuroNumber(string $number): float
     {
-        // Remove espaços, troca vírgula por ponto, e converte para float
         return (float) str_replace(',', '.', str_replace(' ', '', $number));
     }
 
-    private function analyzeInvoiceImage(string $imageUrl): array
+    private function analyzeInvoiceImage($imageUrls): array
     {
+        $imageUrls = is_array($imageUrls) ? $imageUrls : [$imageUrls];
+        $imageUrls = array_values(array_filter($imageUrls));
+
+        $content = [[
+            'type' => 'text',
+            'text' => 'Analisa estas imagens (podem ser varias paginas da mesma fatura) e responde exclusivamente com um objeto JSON (sem qualquer texto explicativo). Junta toda a informacao numa unica fatura. O JSON deve conter os seguintes campos: invoice_date, invoice_number, supplier (com name e nif), buyer (com name e nif), items, totals, taxes (opcional) e payment (opcional). O fornecedor esta geralmente a esquerda e o comprador a direita, mas em muitos casos o NIF a esquerda pertence ao comprador (neste caso, 508263069). Se encontrares este NIF (508263069), considera que e o comprador (buyer). Se nao conseguires identificar com clareza o NIF do fornecedor, define supplier.nif como 999999990. Extrai os produtos com os campos: reference, description, brand, quantity, unit_price, vat e total. Se nao conseguires extrair um item completo, omite-o. O campo totals deve conter subtotal, tax, discount (se aplicavel) e total.'
+        ]];
+
+        foreach ($imageUrls as $imageUrl) {
+            $content[] = [
+                'type' => 'image_url',
+                'image_url' => ['url' => $imageUrl],
+            ];
+        }
+
         $response = OpenAI::chat()->create([
             'model' => 'gpt-4o',
             'messages' => [
                 [
                     'role' => 'user',
-                    'content' => [
-                        [
-                            'type' => 'text',
-                            'text' => 'Analisa esta imagem de fatura de fornecedor e responde exclusivamente com um objeto JSON (sem qualquer texto explicativo). O JSON deve conter os seguintes campos: invoice_date, invoice_number, supplier (com name e nif), buyer (com name e nif), items, totals, taxes (opcional) e payment (opcional). O fornecedor está geralmente à esquerda e o comprador à direita — mas tem atenção: em muitos casos o NIF à esquerda pertence ao comprador (neste caso, 508263069). Por isso, se encontrares este NIF (508263069), considera que é o comprador (buyer). Se não conseguires identificar com clareza o NIF do fornecedor, define o campo supplier.nif como 999999990. Extrai corretamente os produtos, com os campos: reference, description, brand, quantity, unit_price, vat e total. Nunca preenchas campos com valores vazios ou a zero, a não ser que essa informação não exista. Se não conseguires extrair um item completo, omite-o. O campo totals deve conter subtotal, tax, discount (se aplicável) e total, com os valores reais da fatura. Nunca preenchas estes campos com zeros se os valores puderem ser calculados ou extraídos. Tem especial atenção à leitura correta de dígitos em campos numéricos como o NIF — evita confundir o número 0 com o 6 ou outros. Se o NIF tiver 9 dígitos e não for válido, revê a imagem com mais cuidado antes de devolver. Não escrevas absolutamente mais nada além do JSON.'
-                        ],
-                        [
-                            'type' => 'image_url',
-                            'image_url' => ['url' => $imageUrl]
-                        ]
-                    ],
+                    'content' => $content,
                 ],
             ],
         ]);
-
 
         $content = $response->choices[0]->message->content ?? '{}';
 
         \Log::debug('GPT response content: ' . $content);
 
-        // Tenta extrair o JSON com regex
         if (preg_match('/\{.*\}/s', $content, $matches)) {
             $content = $matches[0];
         }
@@ -315,10 +298,68 @@ class MoloniSuplierInvoiceController extends Controller
                 'content' => $content,
             ]);
 
-            throw new \RuntimeException('A resposta do GPT não é um JSON válido.');
+            throw new \RuntimeException('A resposta do GPT nao e um JSON valido.');
         }
 
         return $json;
+    }
+
+    private function extractPhotoNamesFromRequest(Request $request): array
+    {
+        $photos = $request->input('photos', []);
+
+        if (!is_array($photos)) {
+            $photos = [$photos];
+        }
+
+        if ($request->filled('photo')) {
+            $photos[] = $request->input('photo');
+        }
+
+        $photos = array_map(static fn($name) => basename((string) $name), $photos);
+        $photos = array_filter($photos);
+
+        return array_values(array_unique($photos));
+    }
+
+    private function attachPhotosFromTmp(MoloniSuplierInvoice $invoice, array $photoNames): void
+    {
+        foreach ($photoNames as $photoName) {
+            $path = storage_path('tmp/uploads/' . $photoName);
+            if (file_exists($path)) {
+                $invoice->addMedia($path)->toMediaCollection('photo');
+            }
+        }
+    }
+
+    private function syncPhotos(MoloniSuplierInvoice $invoice, array $photoNames): void
+    {
+        $currentMedia = $invoice->getMedia('photo');
+        $currentNames = $currentMedia->pluck('file_name')->all();
+
+        foreach ($currentMedia as $media) {
+            if (!in_array($media->file_name, $photoNames, true)) {
+                $media->delete();
+            }
+        }
+
+        foreach ($photoNames as $photoName) {
+            if (!in_array($photoName, $currentNames, true)) {
+                $path = storage_path('tmp/uploads/' . $photoName);
+                if (file_exists($path)) {
+                    $invoice->addMedia($path)->toMediaCollection('photo');
+                }
+            }
+        }
+    }
+
+    private function getInvoiceImageUrls(MoloniSuplierInvoice $invoice): array
+    {
+        return $invoice->getMedia('photo')
+            ->map(static fn($media) => $media->getUrl())
+            ->filter()
+            ->values()
+            ->all();
     }
 
     public function launchToMoloni($moloni_suplier_invoice_id)
@@ -333,7 +374,6 @@ class MoloniSuplierInvoiceController extends Controller
         if ($supplierName) {
             $results = $moloni->getSuppliersByName($supplierName);
 
-            // Garante que tens ao menos um
             if (count($results) > 0) {
                 $supplier = [
                     'supplier_id' => $results[0]['supplier_id'],
@@ -349,7 +389,7 @@ class MoloniSuplierInvoiceController extends Controller
 
     public function getSuppliersByName(Request $request, MoloniService $moloni)
     {
-        $name = $request->get('term'); // select2 usa 'term'
+        $name = $request->get('term');
 
         if (!$name) {
             return response()->json([]);
@@ -379,16 +419,13 @@ class MoloniSuplierInvoiceController extends Controller
             'country_id' => 'required|integer',
         ]);
 
-        // Se for Portugal (ID 1), valida NIF e código postal
-        if ((int)$validated['country_id'] === 1) {
-
-            // Validação do código postal
+        if ((int) $validated['country_id'] === 1) {
             if (!empty($validated['zip_code']) && !preg_match('/^\d{4}-\d{3}$/', $validated['zip_code'])) {
-                return response()->json(['error' => 'Código postal inválido. Deve ser no formato NNNN-NNN.'], 422);
+                return response()->json(['error' => 'Codigo postal invalido. Deve ser no formato NNNN-NNN.'], 422);
             }
         }
 
-        $validated['number'] = rand(100000000, 999999999); // Código interno aleatório
+        $validated['number'] = rand(100000000, 999999999);
 
         try {
             $moloni = new MoloniService();
@@ -420,7 +457,6 @@ class MoloniSuplierInvoiceController extends Controller
             'items.*.total'       => 'required|numeric',
         ])->validate();
 
-        // Recupera a fatura
         $invoice = MoloniSuplierInvoice::findOrFail($request->input('moloni_suplier_invoice_id'));
 
         $moloni = new MoloniService();
@@ -449,7 +485,6 @@ class MoloniSuplierInvoiceController extends Controller
             'items'          => $validated['items'],
         ]);
 
-        // Só atualiza o campo 'handled'
         $invoice->update([
             'handled' => 1,
         ]);

@@ -16,6 +16,7 @@ class MoloniSuplierInvoice extends Model implements HasMedia
 
     protected $appends = [
         'photo',
+        'photos',
     ];
 
     public $table = 'moloni_suplier_invoices';
@@ -61,5 +62,16 @@ class MoloniSuplierInvoice extends Model implements HasMedia
         }
 
         return $file;
+    }
+
+    public function getPhotosAttribute()
+    {
+        return $this->getMedia('photo')->map(function ($file) {
+            $file->url       = $file->getUrl();
+            $file->thumbnail = $file->getUrl('thumb');
+            $file->preview   = $file->getUrl('preview');
+
+            return $file;
+        });
     }
 }

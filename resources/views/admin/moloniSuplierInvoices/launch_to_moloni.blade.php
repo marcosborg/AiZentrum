@@ -116,8 +116,8 @@
                 </div>
                 <div class="card-body">
                     <!-- Trigger da imagem -->
-                    @if ($moloni_suplier_invoice->photo)
-                        <img src="{{ $moloni_suplier_invoice->photo->getUrl() }}" class="img-thumbnail"
+                    @if ($moloni_suplier_invoice->photos->count())
+                        <img src="{{ $moloni_suplier_invoice->photos->first()->getUrl() }}" class="img-thumbnail"
                             style="cursor:pointer;" data-toggle="modal" data-target="#imageModal">
                     @endif
                 </div>
@@ -137,7 +137,9 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-body p-0">
-                    <img src="{{ $moloni_suplier_invoice->photo->getUrl() }}" class="img-fluid w-100" alt="Fatura">
+                    @foreach($moloni_suplier_invoice->photos as $photo)
+                        <img src="{{ $photo->getUrl() }}" class="img-fluid w-100 mb-2" alt="Fatura">
+                    @endforeach
                 </div>
             </div>
         </div>
