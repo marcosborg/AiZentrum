@@ -1,10 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ $locale }}">
+
+@php
+    $languages = trans('public_forms.languages');
+@endphp
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Zentrum Group | Forms</title>
+    <title>Zentrum Group | {{ trans('public_forms.ui.forms') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
@@ -17,16 +21,28 @@
             <div class="col-md-12">
                 <div class="card mt-5">
                     <div class="card-header text-center">
-                        <img src="{{ $forms->first()->logo->getUrl() }}" class="img-thumbnail" width="100">
+                        <div class="d-flex justify-content-end mb-2">
+                            <div class="btn-group btn-group-sm" role="group" aria-label="{{ trans('public_forms.ui.language') }}">
+                                @foreach ($languages as $code => $name)
+                                    <a href="{{ url('/form/all/' . $forms->first()->project->id) }}?lang={{ $code }}"
+                                        class="btn {{ $locale === $code ? 'btn-primary' : 'btn-outline-primary' }}">
+                                        {{ strtoupper($code) }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                        <img src="{{ asset('images/logo-black.png') }}" class="img-thumbnail" width="100">
                         <h1>{{ $forms->first()->project->name }}</h1>
-                        <h4>Centro de atendimento ao cliente</h4>
+                        <h4>{{ trans('public_forms.ui.customer_service_center') }}</h4>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             @foreach ($forms as $form)
                             <div class="col-md-4">
                                 <div class="d-grid gap-2">
-                                    <a href="/form/{{ $form->id }}" class="btn btn-outline-primary btn-lg m-2">{{ $form->name }}</a>
+                                    <a href="{{ url('/form/' . $form->id) }}?lang={{ $locale }}" class="btn btn-outline-primary btn-lg m-2">
+                                        {{ data_get(trans('public_forms.forms'), $form->id, $form->name) }}
+                                    </a>
                                 </div>
                             </div>
                             @endforeach
@@ -38,7 +54,7 @@
     </div>
     @else
     <div class="alert alert-primary" role="alert">
-        Ainda não existem formulários
+        {{ trans('public_forms.ui.no_forms') }}
     </div>
     @endif
 

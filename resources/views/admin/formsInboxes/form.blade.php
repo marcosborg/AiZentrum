@@ -40,7 +40,15 @@
                                 @foreach ($formData->data as $field)
                                 <li class="list-group-item">
                                     <label><span>[{{ $field['name'] }}]</span>{{ $field['label'] }}</label><br>
-                                    {{ $field['value'] }}
+                                    @if (is_array($field['value']))
+                                        <ul class="mb-0">
+                                            @foreach ($field['value'] as $value)
+                                                <li>{{ $value }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        {{ $field['value'] }}
+                                    @endif
                                 </li>
                                 @endforeach
                             </ul>

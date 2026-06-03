@@ -1,0 +1,4 @@
+---
+deployment:
+  tasks:
+    - if [ -x /opt/cpanel/ea-php82/root/usr/bin/php ]; then /opt/cpanel/ea-php82/root/usr/bin/php artisan optimize:clear; fi

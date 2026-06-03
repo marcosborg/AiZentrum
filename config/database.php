@@ -2,6 +2,38 @@
 
 use Illuminate\Support\Str;
 
+$databaseEnvironment = env('DB_ENV');
+
+$mysqlProfiles = [
+    'production' => [
+        'host' => env('DB_PRODUCTION_HOST', '127.0.0.1'),
+        'port' => env('DB_PRODUCTION_PORT', '3306'),
+        'database' => env('DB_PRODUCTION_DATABASE', 'forge'),
+        'username' => env('DB_PRODUCTION_USERNAME', 'forge'),
+        'password' => env('DB_PRODUCTION_PASSWORD', ''),
+        'unix_socket' => env('DB_PRODUCTION_SOCKET', ''),
+    ],
+    'sandbox' => [
+        'host' => env('DB_SANDBOX_HOST', '127.0.0.1'),
+        'port' => env('DB_SANDBOX_PORT', '8889'),
+        'database' => env('DB_SANDBOX_DATABASE', 'forge'),
+        'username' => env('DB_SANDBOX_USERNAME', 'root'),
+        'password' => env('DB_SANDBOX_PASSWORD', ''),
+        'unix_socket' => env('DB_SANDBOX_SOCKET', ''),
+    ],
+];
+
+$selectedMysqlProfile = $databaseEnvironment
+    ? ($mysqlProfiles[$databaseEnvironment] ?? $mysqlProfiles['sandbox'])
+    : [
+        'host' => env('DB_HOST', '127.0.0.1'),
+        'port' => env('DB_PORT', '3306'),
+        'database' => env('DB_DATABASE', 'forge'),
+        'username' => env('DB_USERNAME', 'forge'),
+        'password' => env('DB_PASSWORD', ''),
+        'unix_socket' => env('DB_SOCKET', ''),
+    ];
+
 return [
 
     /*
@@ -46,12 +78,52 @@ return [
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DATABASE_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '3306'),
-            'database' => env('DB_DATABASE', 'forge'),
-            'username' => env('DB_USERNAME', 'forge'),
-            'password' => env('DB_PASSWORD', ''),
-            'unix_socket' => env('DB_SOCKET', ''),
+            'host' => $selectedMysqlProfile['host'],
+            'port' => $selectedMysqlProfile['port'],
+            'database' => $selectedMysqlProfile['database'],
+            'username' => $selectedMysqlProfile['username'],
+            'password' => $selectedMysqlProfile['password'],
+            'unix_socket' => $selectedMysqlProfile['unix_socket'],
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        'mysql_production' => [
+            'driver' => 'mysql',
+            'url' => env('DATABASE_URL'),
+            'host' => $mysqlProfiles['production']['host'],
+            'port' => $mysqlProfiles['production']['port'],
+            'database' => $mysqlProfiles['production']['database'],
+            'username' => $mysqlProfiles['production']['username'],
+            'password' => $mysqlProfiles['production']['password'],
+            'unix_socket' => $mysqlProfiles['production']['unix_socket'],
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        'mysql_sandbox' => [
+            'driver' => 'mysql',
+            'url' => env('DATABASE_URL'),
+            'host' => $mysqlProfiles['sandbox']['host'],
+            'port' => $mysqlProfiles['sandbox']['port'],
+            'database' => $mysqlProfiles['sandbox']['database'],
+            'username' => $mysqlProfiles['sandbox']['username'],
+            'password' => $mysqlProfiles['sandbox']['password'],
+            'unix_socket' => $mysqlProfiles['sandbox']['unix_socket'],
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',

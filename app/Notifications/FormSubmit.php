@@ -39,7 +39,8 @@ class FormSubmit extends Notification
 
         $html = [];
         foreach ($this->form_data->data as $field) {
-            $html[] = '<strong>' . $field->label . ': </strong>' . $field->value . '<br>';
+            $value = is_array($field->value) ? implode('<br>', $field->value) : $field->value;
+            $html[] = '<strong>' . $field->label . ': </strong>' . $value . '<br>';
         }
         $html = implode($html);
 

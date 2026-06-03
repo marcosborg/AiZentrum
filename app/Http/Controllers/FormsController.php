@@ -7,6 +7,7 @@ use App\Models\Form;
 use App\Models\FormData;
 use App\Http\Controllers\Traits\Iftech;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\App;
 use \App\Models\FormField;
 
 class FormsController extends Controller
@@ -14,11 +15,12 @@ class FormsController extends Controller
 
     use Iftech;
 
-    public function index($form_id)
+    public function index(Request $request, $form_id)
     {
+        $locale = $this->setPublicLocale($request);
         $form = Form::where('id', $form_id)->with('form_fields')->first();
 
-        return view('website.form', compact('form'));
+        return view('website.form', compact('form', 'locale'));
     }
 
     public function formSend(Request $request)
@@ -42,16 +44,23 @@ class FormsController extends Controller
                     'name' => $key,
                 ])->first();
                 if ($request->hasFile($key)) {
-                    if ($request->file($key)->isValid()) {
-                        $path = $request->file($key)->store('uploads', 'public');
-                        $fields[] = [
-                            'name' => $key,
-                            'value' => url('/') . '/storage/' . $path,
-                            'label' => $form_field->label,
-                            'type' => $form_field->type,
-                            'required' => $form_field->required
-                        ];
+                    $urls = [];
+                    $uploadedFiles = is_array($request->file($key)) ? $request->file($key) : [$request->file($key)];
+
+                    foreach ($uploadedFiles as $uploadedFile) {
+                        if ($uploadedFile->isValid()) {
+                            $path = $uploadedFile->store('uploads', 'public');
+                            $urls[] = url('/') . '/storage/' . $path;
+                        }
                     }
+
+                    $fields[] = [
+                        'name' => $key,
+                        'value' => count($urls) === 1 ? $urls[0] : $urls,
+                        'label' => $form_field->label,
+                        'type' => $form_field->type,
+                        'required' => $form_field->required
+                    ];
                 } else {
                     $fields[] = [
                         'name' => $key,
@@ -87,10 +96,26 @@ class FormsController extends Controller
 
     }
 
-    public function all($project_id)
+    public function all(Request $request, $project_id)
     {
+        $locale = $this->setPublicLocale($request);
         $forms = Form::where('project_id', $project_id)->get()->load('project');
 
-        return view('website.all', compact('forms'));
+        return view('website.all', compact('forms', 'locale'));
+    }
+
+    private function setPublicLocale(Request $request): string
+    {
+        $supportedLocales = ['pt', 'en', 'es', 'fr'];
+        $locale = $request->query('lang', session('public_locale', 'pt'));
+
+        if (! in_array($locale, $supportedLocales, true)) {
+            $locale = 'pt';
+        }
+
+        session(['public_locale' => $locale]);
+        App::setLocale($locale);
+
+        return $locale;
     }
 }
