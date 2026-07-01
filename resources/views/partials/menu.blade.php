@@ -209,26 +209,28 @@
                         </li>
                     @endcan
                 </ul>
-                @can('zcm_access')
-                        <li class="c-sidebar-nav-item">
-                            <a href="/admin/zcm/dashboard" class="c-sidebar-nav-link {{ request()->is("admin/zcm/dashboard") ? "c-active" : "" }}">
-                                <i class="fa-fw fas fa-comments c-sidebar-nav-icon">
-
-                                </i>
-                                {{ trans('cruds.zcm.title') }}
-                            </a>
-                        </li>
-                        <li class="c-sidebar-nav-item">
-                            <a href="{{ route('admin.zcm.pending-ads.index') }}" class="c-sidebar-nav-link {{ request()->is("admin/zcm/pending-ads*") ? "c-active" : "" }}">
-                                <i class="fa-fw fas fa-list c-sidebar-nav-icon">
-
-                                </i>
-                                An&uacute;ncios pendentes
-                            </a>
-                        </li>
-                    @endcan
             </li>
         @endcan
+        @can('zcm_access')
+            <li class="c-sidebar-nav-item">
+                <a href="/admin/zcm/dashboard" class="c-sidebar-nav-link {{ request()->is("admin/zcm/dashboard") ? "c-active" : "" }}">
+                    <i class="fa-fw fas fa-comments c-sidebar-nav-icon">
+
+                    </i>
+                    {{ trans('cruds.zcm.title') }}
+                </a>
+            </li>
+        @endcan
+        @if(Gate::allows('zcm_pending_ad_access') || Gate::allows('zcm_access'))
+            <li class="c-sidebar-nav-item">
+                <a href="{{ route('admin.zcm.pending-ads.index') }}" class="c-sidebar-nav-link {{ request()->is("admin/zcm/pending-ads*") ? "c-active" : "" }}">
+                    <i class="fa-fw fas fa-list c-sidebar-nav-icon">
+
+                    </i>
+                    An&uacute;ncios pendentes
+                </a>
+            </li>
+        @endif
         @can('ai_training_access')
             <li class="c-sidebar-nav-dropdown {{ request()->is("admin/bots*") ? "c-show" : "" }}">
                 <a class="c-sidebar-nav-dropdown-toggle" href="#">
