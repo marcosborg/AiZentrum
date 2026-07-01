@@ -13,6 +13,7 @@ use App\Services\ZcmService;
 use Gate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -75,12 +76,16 @@ class ZcmPendingAdController extends Controller
             'Updated local',
         ]];
 
+        $hasEnrichments = $this->hasZcmPendingAdEnrichmentsTable();
+
         $this->pendingAdsQuery($request)
-            ->with('enrichment')
+            ->when($hasEnrichments, fn ($query) => $query->with('enrichment'))
             ->orderBy('id')
-            ->chunkById(200, function ($ads) use (&$rows) {
+            ->chunkById(200, function ($ads) use (&$rows, $hasEnrichments) {
                 foreach ($ads as $ad) {
-                    $draft = data_get($ad->enrichment?->technical_data, 'prestashop_draft', []);
+                    $draft = $hasEnrichments
+                        ? data_get($ad->enrichment?->technical_data, 'prestashop_draft', [])
+                        : [];
 
                     $rows[] = [
                         $ad->id,
@@ -120,7 +125,23 @@ class ZcmPendingAdController extends Controller
     {
         $this->authorizeZcmPendingAds();
 
-        $pendingAd->load(['enrichment', 'pipelineEvents.creator']);
+        $relations = [];
+
+        if ($this->hasZcmPendingAdEnrichmentsTable()) {
+            $relations[] = 'enrichment';
+        } else {
+            $pendingAd->setRelation('enrichment', null);
+        }
+
+        if ($this->hasZcmPendingAdPipelineEventsTable()) {
+            $relations[] = 'pipelineEvents.creator';
+        } else {
+            $pendingAd->setRelation('pipelineEvents', collect());
+        }
+
+        if ($relations !== []) {
+            $pendingAd->load($relations);
+        }
 
         return view('admin.zcm.pending-ad-show', compact('pendingAd'));
     }
@@ -395,6 +416,28 @@ class ZcmPendingAdController extends Controller
     private function wantsJson(Request $request): bool
     {
         return $request->expectsJson() || $request->ajax();
+    }
+
+    private function hasZcmPendingAdEnrichmentsTable(): bool
+    {
+        static $exists = null;
+
+        if ($exists === null) {
+            $exists = Schema::hasTable('zcm_pending_ad_enrichments');
+        }
+
+        return $exists;
+    }
+
+    private function hasZcmPendingAdPipelineEventsTable(): bool
+    {
+        static $exists = null;
+
+        if ($exists === null) {
+            $exists = Schema::hasTable('zcm_pending_ad_pipeline_events');
+        }
+
+        return $exists;
     }
 
     private function pendingAdsQuery(Request $request)
