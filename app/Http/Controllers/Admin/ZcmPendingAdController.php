@@ -15,7 +15,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ZcmPendingAdController extends Controller
 {
@@ -41,83 +40,80 @@ class ZcmPendingAdController extends Controller
         return view('admin.zcm.pending-ads', compact('ads', 'syncLogs', 'adsConfigured'));
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): RedirectResponse
     {
         $this->authorizeZcmPendingAds();
 
-        $filename = 'zcm-pending-ads-' . now()->format('Ymd-His') . '.xls';
-        $headers = [
-            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Cache-Control' => 'max-age=0, no-cache, must-revalidate, proxy-revalidate',
-        ];
+        $filename = 'zcm-pending-ads-' . now()->format('Ymd-His') . '.xlsx';
+        $directory = public_path('exports');
 
-        return response()->streamDownload(function () use ($request) {
-            echo "\xEF\xBB\xBF";
-            echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-            echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
-            echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" ';
-            echo 'xmlns:o="urn:schemas-microsoft-com:office:office" ';
-            echo 'xmlns:x="urn:schemas-microsoft-com:office:excel" ';
-            echo 'xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
-            echo '<Worksheet ss:Name="Anuncios pendentes"><Table>' . "\n";
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
 
-            $this->excelRow([
-                'ID local',
-                'ID ZCM',
-                'Reference',
-                'Title',
-                'Description',
-                'Price',
-                'Category',
-                'Brand model',
-                'Requested by',
-                'Status ZCM',
-                'Sync status',
-                'Pipeline status',
-                'Review status',
-                'Prestashop draft name',
-                'Prestashop category',
-                'Prestashop price',
-                'Created ZCM',
-                'Updated ZCM',
-                'Created local',
-                'Updated local',
-            ]);
+        $path = $directory . DIRECTORY_SEPARATOR . $filename;
+        $rows = [[
+            'ID local',
+            'ID ZCM',
+            'Reference',
+            'Title',
+            'Description',
+            'Price',
+            'Category',
+            'Brand model',
+            'Requested by',
+            'Status ZCM',
+            'Sync status',
+            'Pipeline status',
+            'Review status',
+            'Prestashop draft name',
+            'Prestashop category',
+            'Prestashop price',
+            'Created ZCM',
+            'Updated ZCM',
+            'Created local',
+            'Updated local',
+        ]];
 
-            $this->pendingAdsQuery($request)
-                ->with('enrichment')
-                ->orderBy('id')
-                ->chunkById(200, function ($ads) {
-                    foreach ($ads as $ad) {
-                        $draft = data_get($ad->enrichment?->technical_data, 'prestashop_draft', []);
+        $this->pendingAdsQuery($request)
+            ->with('enrichment')
+            ->orderBy('id')
+            ->chunkById(200, function ($ads) use (&$rows) {
+                foreach ($ads as $ad) {
+                    $draft = data_get($ad->enrichment?->technical_data, 'prestashop_draft', []);
 
-                        $this->excelRow([
-                            $ad->id,
-                            $ad->zcmanager_ad_id,
-                            $ad->reference,
-                            $ad->title,
-                            $ad->description,
-                            $ad->price,
-                            $ad->category,
-                            data_get($ad->brand_model_data, 'manufacturer') ?: $ad->brand_model,
-                            data_get($ad->requested_by_data, 'name') ?: $ad->requested_by,
-                            $ad->status,
-                            $ad->sync_status,
-                            $ad->pipeline_status_label,
-                            $ad->review_status_label,
-                            data_get($draft, 'name'),
-                            trim((string) data_get($draft, 'prestashop_category_id') . ' ' . (string) data_get($draft, 'prestashop_category_name')),
-                            data_get($draft, 'price'),
-                            optional($ad->zcmanager_created_at)->format('Y-m-d H:i:s'),
-                            optional($ad->zcmanager_updated_at)->format('Y-m-d H:i:s'),
-                            optional($ad->created_at)->format('Y-m-d H:i:s'),
-                            optional($ad->updated_at)->format('Y-m-d H:i:s'),
-                        ]);
-                    }
-                });
+                    $rows[] = [
+                        $ad->id,
+                        $ad->zcmanager_ad_id,
+                        $ad->reference,
+                        $ad->title,
+                        $ad->description,
+                        $ad->price,
+                        $ad->category,
+                        data_get($ad->brand_model_data, 'manufacturer') ?: $ad->brand_model,
+                        data_get($ad->requested_by_data, 'name') ?: $ad->requested_by,
+                        $ad->status,
+                        $ad->sync_status,
+                        $ad->pipeline_status_label,
+                        $ad->review_status_label,
+                        data_get($draft, 'name'),
+                        trim((string) data_get($draft, 'prestashop_category_id') . ' ' . (string) data_get($draft, 'prestashop_category_name')),
+                        data_get($draft, 'price'),
+                        optional($ad->zcmanager_created_at)->format('Y-m-d H:i:s'),
+                        optional($ad->zcmanager_updated_at)->format('Y-m-d H:i:s'),
+                        optional($ad->created_at)->format('Y-m-d H:i:s'),
+                        optional($ad->updated_at)->format('Y-m-d H:i:s'),
+                    ];
+                }
+            });
 
-            echo '</Table></Worksheet></Workbook>';
-        }, $filename, $headers);
+        $this->writeXlsx($path, $rows);
+
+        return redirect()
+            ->route('admin.zcm.pending-ads.index', $request->query())
+            ->with('message', 'Excel gerado com sucesso.')
+            ->with('export_url', asset('exports/' . $filename))
+            ->with('export_filename', $filename);
     }
 
     public function show(ZcmPendingAd $pendingAd)
@@ -427,34 +423,175 @@ class ZcmPendingAdController extends Controller
             });
     }
 
-    private function excelRow(array $values): void
+    private function writeXlsx(string $path, array $rows): void
     {
-        echo '<Row>';
+        $sheetRows = '';
 
-        foreach ($values as $value) {
-            $this->excelCell($value);
+        foreach ($rows as $rowIndex => $values) {
+            $sheetRows .= '<row r="' . ($rowIndex + 1) . '">';
+
+            foreach (array_values($values) as $columnIndex => $value) {
+                $cell = $this->xlsxColumnName($columnIndex + 1) . ($rowIndex + 1);
+                $sheetRows .= '<c r="' . $cell . '" t="inlineStr"><is><t xml:space="preserve">'
+                    . $this->xmlValue($value)
+                    . '</t></is></c>';
+            }
+
+            $sheetRows .= '</row>';
         }
 
-        echo '</Row>' . "\n";
+        $sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            . 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            . '<sheetData>' . $sheetRows . '</sheetData>'
+            . '</worksheet>';
+
+        $createdAt = now()->toIso8601String();
+        $files = [
+            '[Content_Types].xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                . '<Default Extension="xml" ContentType="application/xml"/>'
+                . '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+                . '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+                . '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+                . '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+                . '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'
+                . '</Types>',
+            '_rels/.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+                . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+                . '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
+                . '</Relationships>',
+            'docProps/app.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                . '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" '
+                . 'xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">'
+                . '<Application>Zentrum AI</Application></Properties>',
+            'docProps/core.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                . '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+                . 'xmlns:dc="http://purl.org/dc/elements/1.1/" '
+                . 'xmlns:dcterms="http://purl.org/dc/terms/" '
+                . 'xmlns:dcmitype="http://purl.org/dc/dcmitype/" '
+                . 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+                . '<dc:title>Anuncios pendentes</dc:title>'
+                . '<dc:creator>Zentrum AI</dc:creator>'
+                . '<dcterms:created xsi:type="dcterms:W3CDTF">' . $createdAt . '</dcterms:created>'
+                . '<dcterms:modified xsi:type="dcterms:W3CDTF">' . $createdAt . '</dcterms:modified>'
+                . '</cp:coreProperties>',
+            'xl/workbook.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+                . 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+                . '<sheets><sheet name="Anuncios pendentes" sheetId="1" r:id="rId1"/></sheets>'
+                . '</workbook>',
+            'xl/_rels/workbook.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+                . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+                . '</Relationships>',
+            'xl/styles.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                . '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                . '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>'
+                . '<fills count="1"><fill><patternFill patternType="none"/></fill></fills>'
+                . '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+                . '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+                . '<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>'
+                . '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+                . '</styleSheet>',
+            'xl/worksheets/sheet1.xml' => $sheetXml,
+        ];
+
+        $this->writeZipStore($path, $files);
     }
 
-    private function excelCell($value): void
+    private function writeZipStore(string $path, array $files): void
     {
-        $type = is_numeric($value) && !is_string($value) ? 'Number' : 'String';
-        $value = $this->excelValue($value);
+        $handle = fopen($path, 'wb');
 
-        echo '<Cell><Data ss:Type="' . $type . '">' . $value . '</Data></Cell>';
+        if ($handle === false) {
+            abort(Response::HTTP_INTERNAL_SERVER_ERROR, 'Nao foi possivel criar o ficheiro Excel.');
+        }
+
+        $centralDirectory = '';
+
+        foreach ($files as $name => $contents) {
+            $offset = ftell($handle);
+            $size = strlen($contents);
+            $crc = crc32($contents);
+
+            fwrite($handle, pack('V', 0x04034b50));
+            fwrite($handle, pack('v', 20));
+            fwrite($handle, pack('v', 0));
+            fwrite($handle, pack('v', 0));
+            fwrite($handle, pack('v', 0));
+            fwrite($handle, pack('v', 0));
+            fwrite($handle, pack('V', $crc));
+            fwrite($handle, pack('V', $size));
+            fwrite($handle, pack('V', $size));
+            fwrite($handle, pack('v', strlen($name)));
+            fwrite($handle, pack('v', 0));
+            fwrite($handle, $name);
+            fwrite($handle, $contents);
+
+            $centralDirectory .= pack('V', 0x02014b50);
+            $centralDirectory .= pack('v', 20);
+            $centralDirectory .= pack('v', 20);
+            $centralDirectory .= pack('v', 0);
+            $centralDirectory .= pack('v', 0);
+            $centralDirectory .= pack('v', 0);
+            $centralDirectory .= pack('v', 0);
+            $centralDirectory .= pack('V', $crc);
+            $centralDirectory .= pack('V', $size);
+            $centralDirectory .= pack('V', $size);
+            $centralDirectory .= pack('v', strlen($name));
+            $centralDirectory .= pack('v', 0);
+            $centralDirectory .= pack('v', 0);
+            $centralDirectory .= pack('v', 0);
+            $centralDirectory .= pack('v', 0);
+            $centralDirectory .= pack('V', 0);
+            $centralDirectory .= pack('V', $offset);
+            $centralDirectory .= $name;
+        }
+
+        $centralOffset = ftell($handle);
+        fwrite($handle, $centralDirectory);
+        $centralSize = strlen($centralDirectory);
+
+        fwrite($handle, pack('V', 0x06054b50));
+        fwrite($handle, pack('v', 0));
+        fwrite($handle, pack('v', 0));
+        fwrite($handle, pack('v', count($files)));
+        fwrite($handle, pack('v', count($files)));
+        fwrite($handle, pack('V', $centralSize));
+        fwrite($handle, pack('V', $centralOffset));
+        fwrite($handle, pack('v', 0));
+
+        fclose($handle);
     }
 
-    private function excelValue($value): string
+    private function xlsxColumnName(int $index): string
+    {
+        $name = '';
+
+        while ($index > 0) {
+            $index--;
+            $name = chr(65 + ($index % 26)) . $name;
+            $index = intdiv($index, 26);
+        }
+
+        return $name;
+    }
+
+    private function xmlValue($value): string
     {
         if (is_array($value) || is_object($value)) {
             $value = json_encode($value, JSON_UNESCAPED_UNICODE);
         }
 
         $value = preg_replace('/[^\P{C}\t\n\r]/u', '', (string) $value);
+        $value = str_replace(["\r\n", "\r", "\n"], ' ', $value);
 
-        return htmlspecialchars((string) $value, ENT_XML1 | ENT_COMPAT, 'UTF-8');
+        return htmlspecialchars($value, ENT_XML1 | ENT_COMPAT, 'UTF-8');
     }
 
     private function imagePayload(array $image): array

@@ -5,6 +5,14 @@
   @if(session('error'))
     <div class="alert alert-danger" role="alert">{{ session('error') }}</div>
   @endif
+  @if(session('export_url'))
+    <div class="alert alert-info d-flex justify-content-between align-items-center" role="alert">
+      <span>Ficheiro Excel pronto: <strong>{{ session('export_filename') }}</strong></span>
+      <a href="{{ session('export_url') }}" class="btn btn-sm btn-success" download="{{ session('export_filename') }}">
+        <i class="fas fa-file-excel"></i> Descarregar Excel
+      </a>
+    </div>
+  @endif
   @if(!$adsConfigured)
     <div class="alert alert-warning" role="alert">
       Define <strong>ZCMANAGER_API_TOKEN</strong> no ficheiro <strong>.env</strong> para ativar a sincronizacao dos anuncios pendentes.
@@ -15,9 +23,16 @@
     <div class="card-header d-flex justify-content-between align-items-center">
       <strong>An&uacute;ncios pendentes</strong>
       <div class="d-flex align-items-center">
-        <a href="{{ route('admin.zcm.pending-ads.export', request()->query()) }}" class="btn btn-success btn-sm mr-2">
-          <i class="fas fa-file-excel"></i> Exportar Excel
-        </a>
+        <form method="get" action="{{ route('admin.zcm.pending-ads.export') }}" class="mb-0 mr-2">
+          @foreach(request()->except('page') as $key => $value)
+            @if(is_scalar($value) && $value !== '')
+              <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+            @endif
+          @endforeach
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="fas fa-file-excel"></i> Gerar Excel
+          </button>
+        </form>
         <form method="post" action="{{ route('admin.zcm.pending-ads.sync') }}" class="mb-0">
           @csrf
           <input type="hidden" name="reference" value="{{ request('reference') }}">

@@ -1,5 +1,6 @@
 .env
 public/storage
+public/exports/
 storage/app/db-sync/*.sql
 storage/app/public/
 storage/app/moloni_tokens.json
