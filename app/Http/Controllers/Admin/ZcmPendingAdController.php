@@ -153,9 +153,9 @@ class ZcmPendingAdController extends Controller
             'description' => Arr::get($item, 'description'),
             'price' => $this->normalizePrice(Arr::get($item, 'price')),
             'category' => Arr::get($item, 'category'),
-            'brand_model' => Arr::get($item, 'brand_model'),
+            'brand_model' => $this->stringifyValue(Arr::get($item, 'brand_model')),
             'images' => $this->normalizeImages(Arr::get($item, 'images')),
-            'requested_by' => Arr::get($item, 'requested_by'),
+            'requested_by' => $this->stringifyValue(Arr::get($item, 'requested_by')),
             'status' => Arr::get($item, 'status'),
             'zcmanager_created_at' => $this->parseDate(Arr::get($item, 'created_at')),
             'zcmanager_updated_at' => $this->parseDate(Arr::get($item, 'updated_at')),
@@ -166,6 +166,19 @@ class ZcmPendingAdController extends Controller
         $ad->save();
 
         return $ad;
+    }
+
+    private function stringifyValue($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_array($value) || is_object($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+
+        return (string) $value;
     }
 
     private function normalizePrice($price): ?float
