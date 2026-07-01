@@ -211,11 +211,19 @@
                 </ul>
                 @can('zcm_access')
                         <li class="c-sidebar-nav-item">
-                            <a href="/admin/zcm/dashboard" class="c-sidebar-nav-link {{ request()->is("admin/zcms") || request()->is("admin/zcm/*") ? "c-active" : "" }}">
+                            <a href="/admin/zcm/dashboard" class="c-sidebar-nav-link {{ request()->is("admin/zcm/dashboard") ? "c-active" : "" }}">
                                 <i class="fa-fw fas fa-comments c-sidebar-nav-icon">
 
                                 </i>
                                 {{ trans('cruds.zcm.title') }}
+                            </a>
+                        </li>
+                        <li class="c-sidebar-nav-item">
+                            <a href="{{ route('admin.zcm.pending-ads.index') }}" class="c-sidebar-nav-link {{ request()->is("admin/zcm/pending-ads*") ? "c-active" : "" }}">
+                                <i class="fa-fw fas fa-list c-sidebar-nav-icon">
+
+                                </i>
+                                An&uacute;ncios pendentes
                             </a>
                         </li>
                     @endcan

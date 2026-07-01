@@ -276,8 +276,8 @@ return [
         'title_singular' => 'Logistic',
     ],
     'zcm' => [
-        'title'          => 'Zcm',
-        'title_singular' => 'Zcm',
+        'title'          => 'ZCManager',
+        'title_singular' => 'ZCManager',
     ],
     'aiTraining' => [
         'title'          => 'Ai Training',

@@ -44,7 +44,10 @@ return [
         'url' => env('PS_API_URL', 'https://techniczentrum.com/api'),
         'key' => env('PS_API_KEY', 'U7J6Y3I3N4D6W8V9T0P5A2R1E3S4X6C7'),
     ],
-        'zcm' => [
+    'zcm' => [
         'base' => env('ZCM_API_BASE'),
+        'token' => env('ZCM_API_TOKEN'),
+        'manager_base' => env('ZCMANAGER_API_URL', 'https://zcmanager.com'),
+        'manager_token' => env('ZCMANAGER_API_TOKEN'),
     ],
 ];

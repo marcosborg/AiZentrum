@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\MoloniSuplierInvoiceController;
 use App\Http\Controllers\Admin\ZcmDashboardController;
+use App\Http\Controllers\Admin\ZcmPendingAdController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
 
@@ -175,6 +176,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
         ->name('ai-messages.assistant.instructions');
 
     Route::get('/zcm/dashboard', ZcmDashboardController::class)->name('zcm.dashboard');
+    Route::get('/zcm/pending-ads', [ZcmPendingAdController::class, 'index'])->name('zcm.pending-ads.index');
+    Route::post('/zcm/pending-ads/sync', [ZcmPendingAdController::class, 'sync'])->name('zcm.pending-ads.sync');
 });
 
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
