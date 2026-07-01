@@ -11,6 +11,7 @@ use App\Services\ZcmAdPrestashopDraftService;
 use App\Services\ZcmPendingAdSyncService;
 use App\Services\ZcmService;
 use Gate;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -163,9 +164,10 @@ class ZcmPendingAdController extends Controller
             ->with('message', $result['imported'] . ' anuncios pendentes sincronizados.');
     }
 
-    public function runStage(Request $request, ZcmPendingAd $pendingAd, ZcmAdPipelineService $pipeline): RedirectResponse
+    public function runStage(Request $request, ZcmPendingAd $pendingAd, ZcmAdPipelineService $pipeline): RedirectResponse|JsonResponse
     {
         $this->authorizeZcmPendingAds();
+        @set_time_limit(180);
 
         $validated = $request->validate([
             'stage' => 'required|in:research,analysis,images,seo,publishing',
@@ -178,14 +180,41 @@ class ZcmPendingAdController extends Controller
         $event = $pipeline->runStage($pendingAd, $validated['stage'], auth()->id());
 
         if ($event->status === 'failed') {
+            if ($this->wantsJson($request)) {
+                return response()->json([
+                    'message' => $event->error ?: 'Nao foi possivel executar a etapa.',
+                    'stage' => $validated['stage'],
+                    'status' => 'failed',
+                    'redirect_url' => route('admin.zcm.pending-ads.show', $pendingAd),
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
             return redirect()
                 ->route('admin.zcm.pending-ads.show', $pendingAd)
                 ->with('error', $event->error);
         }
 
+        if ($this->wantsJson($request)) {
+            return response()->json([
+                'message' => 'Etapa executada com sucesso.',
+                'stage' => $validated['stage'],
+                'status' => 'success',
+                'redirect_url' => route('admin.zcm.pending-ads.show', $pendingAd),
+            ]);
+        }
+
         return redirect()
             ->route('admin.zcm.pending-ads.show', $pendingAd)
             ->with('message', 'Etapa executada com sucesso.');
+    }
+
+    public function runStageFallback(ZcmPendingAd $pendingAd): RedirectResponse
+    {
+        $this->authorizeZcmPendingAds();
+
+        return redirect()
+            ->route('admin.zcm.pending-ads.show', $pendingAd)
+            ->with('error', 'Esta etapa deve ser executada pelo botao do pipeline.');
     }
 
     public function recreateImage(Request $request, ZcmPendingAd $pendingAd, ZcmAdImageService $images, ZcmAdPipelineService $pipeline)
@@ -321,12 +350,17 @@ class ZcmPendingAdController extends Controller
             'prestashop_category_id' => 'nullable|integer|min:1',
             'manufacturer' => 'nullable|string|max:191',
             'model' => 'nullable|string|max:191',
+            'brand_filter' => 'nullable|string|max:191',
+            'model_filter' => 'nullable|string|max:191',
             'short_description' => 'nullable|string|max:2000',
             'description' => 'nullable|string|max:20000',
             'meta_title' => 'nullable|string|max:70',
             'meta_description' => 'nullable|string|max:170',
             'link_rewrite' => 'nullable|string|max:191',
             'approval_notes' => 'nullable|string|max:5000',
+            'keywords' => 'nullable|string|max:1000',
+            'tags' => 'nullable|array',
+            'tags.*' => 'nullable|string|max:1000',
             'translations' => 'nullable|array',
             'translations.*.name' => 'nullable|string|max:128',
             'translations.*.short_description' => 'nullable|string|max:2000',

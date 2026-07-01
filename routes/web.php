@@ -181,6 +181,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('/zcm/pending-ads/sync', [ZcmPendingAdController::class, 'sync'])->name('zcm.pending-ads.sync');
     Route::get('/zcm/pending-ads/{pendingAd}', [ZcmPendingAdController::class, 'show'])->name('zcm.pending-ads.show');
     Route::get('/zcm/pending-ads/{pendingAd}/generated-image/{filename}', [ZcmPendingAdController::class, 'generatedImage'])->name('zcm.pending-ads.generated-image');
+    Route::get('/zcm/pending-ads/{pendingAd}/run-stage', [ZcmPendingAdController::class, 'runStageFallback'])->name('zcm.pending-ads.run-stage.fallback');
     Route::post('/zcm/pending-ads/{pendingAd}/run-stage', [ZcmPendingAdController::class, 'runStage'])->name('zcm.pending-ads.run-stage');
     Route::post('/zcm/pending-ads/{pendingAd}/recreate-image', [ZcmPendingAdController::class, 'recreateImage'])->name('zcm.pending-ads.recreate-image');
     Route::post('/zcm/pending-ads/{pendingAd}/delete-generated-image', [ZcmPendingAdController::class, 'deleteGeneratedImage'])->name('zcm.pending-ads.delete-generated-image');

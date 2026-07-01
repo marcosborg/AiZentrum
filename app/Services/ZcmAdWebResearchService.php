@@ -36,7 +36,8 @@ class ZcmAdWebResearchService
     {
         try {
             $response = Http::withToken($apiKey)
-                ->timeout(60)
+                ->connectTimeout(10)
+                ->timeout(45)
                 ->post('https://api.openai.com/v1/responses', [
                     'model' => config('services.openai.web_search_model', config('services.openai.model', 'gpt-4o-mini')),
                     'tools' => [
@@ -235,7 +236,7 @@ class ZcmAdWebResearchService
     private function priceCandidatesFromSources(array $sources): array
     {
         return collect($sources)
-            ->take(6)
+            ->take(3)
             ->map(fn($source) => $this->priceCandidateFromSource($source))
             ->filter()
             ->values()
@@ -249,7 +250,8 @@ class ZcmAdWebResearchService
                 'User-Agent' => 'Mozilla/5.0 ZentrumAI/1.0',
                 'Accept' => 'text/html,application/xhtml+xml',
             ])
-                ->timeout(15)
+                ->connectTimeout(5)
+                ->timeout(8)
                 ->get($source['url']);
 
             if (!$response->ok()) {

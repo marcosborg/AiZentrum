@@ -9,6 +9,10 @@ use Illuminate\Support\Str;
 
 class ZcmAdSeoService
 {
+    public function __construct(private readonly ZcmAdPrestashopRulesService $rules)
+    {
+    }
+
     public function generate(ZcmPendingAd $ad): array
     {
         $fallback = $this->fallbackSeo($ad);
@@ -20,6 +24,7 @@ class ZcmAdSeoService
 
         try {
             $response = Http::withToken($apiKey)
+                ->connectTimeout(10)
                 ->timeout(45)
                 ->post('https://api.openai.com/v1/chat/completions', [
                     'model' => config('services.openai.model', 'gpt-4o-mini'),
@@ -28,12 +33,18 @@ class ZcmAdSeoService
                     'messages' => [
                         [
                             'role' => 'system',
-                            'content' => 'Gerador SEO para ecommerce automovel. Responde apenas com JSON valido em Portugues de Portugal.',
+                            'content' => "Gerador SEO para anuncios PrestaShop TechnicZentrum. Responde apenas com JSON valido em Portugues de Portugal.\n\n" . $this->rules->prompt(),
                         ],
                         [
                             'role' => 'user',
                             'content' => json_encode([
                                 'expected_keys' => ['title', 'short_description', 'long_description', 'meta_title', 'meta_description', 'keywords', 'slug'],
+                                'hard_rules' => [
+                                    'Nao traduzir nem alterar referencias.',
+                                    'Nao inventar anos, compatibilidades, aplicacoes ou caracteristicas.',
+                                    'Se o ano nao existir nos dados, omitir o ano.',
+                                    'Gerar SEO canonico em PT; o rascunho PrestaShop tratara FR, ES e EN.',
+                                ],
                                 'ad' => [
                                     'reference' => $ad->reference,
                                     'title' => $ad->title,

@@ -197,7 +197,7 @@ class ZcmAdImageService
             })
             ->filter(fn($source) => !empty($source['url']))
             ->unique('url')
-            ->take(12)
+            ->take(6)
             ->values();
 
         if ($pages->isEmpty()) {
@@ -317,7 +317,8 @@ class ZcmAdImageService
                 'Accept-Language' => 'pt-PT,pt;q=0.9,en;q=0.8',
                 'Cache-Control' => 'no-cache',
             ])
-                ->timeout(15)
+                ->connectTimeout(5)
+                ->timeout(8)
                 ->get($page['url']);
 
             if (!$response->ok()) {

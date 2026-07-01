@@ -63,10 +63,10 @@
 
   <div class="card mb-4">
     <div class="card-header"><strong>Pipeline IA</strong></div>
-    <div class="card-body">
+    <div class="card-body" id="zcm-pipeline-panel">
       <div class="btn-group mb-3" role="group">
         @foreach(['research' => 'Pesquisa interna', 'analysis' => 'An&aacute;lise IA', 'images' => 'Imagens', 'seo' => 'SEO', 'publishing' => 'Preparar exporta&ccedil;&atilde;o'] as $stage => $label)
-          <form method="post" action="{{ route('admin.zcm.pending-ads.run-stage', $pendingAd) }}" class="mr-2">
+          <form method="post" action="{{ route('admin.zcm.pending-ads.run-stage', $pendingAd) }}" class="mr-2 js-run-stage-form">
             @csrf
             <input type="hidden" name="stage" value="{{ $stage }}">
             <button class="btn btn-sm btn-outline-primary">{!! $label !!}</button>
@@ -88,6 +88,8 @@
         $prestashopLanguages = data_get($prestashopDraft, 'prestashop_languages', []);
         $prestashopCategories = data_get($prestashopDraft, 'prestashop_categories', []);
         $prestashopTranslations = data_get($prestashopDraft, 'translations', []);
+        $prestashopTags = data_get($prestashopDraft, 'tags', []);
+        $generationWarnings = data_get($prestashopDraft, 'generation_warnings', []);
       @endphp
 
       @if($researchBestMatch || $analysis)
@@ -413,6 +415,9 @@
                       (score {{ data_get($prestashopDraft, 'prestashop_category_score') }})
                     @endif
                   </small>
+                  @if(data_get($prestashopDraft, 'category_reason'))
+                    <small class="text-muted d-block">{{ data_get($prestashopDraft, 'category_reason') }}</small>
+                  @endif
                 @else
                   <small class="text-muted">Regenera o rascunho para consultar categorias Prestashop.</small>
                 @endif
@@ -428,6 +433,18 @@
               <div class="form-group">
                 <label>Modelo</label>
                 <input class="form-control" name="model" value="{{ old('model', data_get($prestashopDraft, 'model')) }}">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="form-group">
+                <label>Filtro marca</label>
+                <input class="form-control" name="brand_filter" value="{{ old('brand_filter', data_get($prestashopDraft, 'brand_filter')) }}">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="form-group">
+                <label>Filtro modelo</label>
+                <input class="form-control" name="model_filter" value="{{ old('model_filter', data_get($prestashopDraft, 'model_filter')) }}">
               </div>
             </div>
             <div class="col-md-6">
@@ -462,11 +479,33 @@
             </div>
             <div class="col-md-12">
               <div class="form-group">
+                <label>Tags principais</label>
+                <textarea class="form-control" name="keywords" rows="2">{{ old('keywords', implode(', ', data_get($prestashopDraft, 'keywords', []))) }}</textarea>
+                <small class="text-muted">Separar por virgulas ou linhas. As referencias devem ficar intactas.</small>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="form-group">
                 <label>Notas para aprova&ccedil;&atilde;o</label>
                 <textarea class="form-control" name="approval_notes" rows="3">{{ old('approval_notes', data_get($prestashopDraft, 'approval_notes')) }}</textarea>
               </div>
             </div>
           </div>
+
+          @if(!empty($generationWarnings))
+            <div class="alert alert-warning pipeline-price-note">
+              <strong>Avisos de gera&ccedil;&atilde;o:</strong>
+              <ul class="mb-0">
+                @foreach($generationWarnings as $warning)
+                  <li>{{ $warning }}</li>
+                @endforeach
+              </ul>
+            </div>
+          @endif
+
+          @if(data_get($prestashopDraft, 'rules_version'))
+            <div class="text-muted mb-3">Regras TechnicZentrum: {{ data_get($prestashopDraft, 'rules_version') }}</div>
+          @endif
 
           @if(!empty(data_get($prestashopDraft, 'compatibilities', [])) || !empty(data_get($prestashopDraft, 'technical_references', [])))
             <div class="pipeline-draft-meta mb-3">
@@ -512,6 +551,10 @@
                     <div class="form-group mb-0">
                       <label>Slug</label>
                       <input class="form-control" name="translations[{{ $languageId }}][link_rewrite]" value="{{ old('translations.' . $languageId . '.link_rewrite', data_get($translation, 'link_rewrite')) }}">
+                    </div>
+                    <div class="form-group mt-3 mb-0">
+                      <label>Tags</label>
+                      <textarea class="form-control" name="tags[{{ $languageId }}]" rows="2">{{ old('tags.' . $languageId, implode(', ', data_get($prestashopTags, $languageId, []))) }}</textarea>
                     </div>
                   </div>
                 @endforeach
@@ -751,12 +794,25 @@
   $(function () {
     const alertBox = $('#zcm-image-ajax-alert');
     const grid = $('#zcm-image-grid');
+    const pipelinePanel = $('#zcm-pipeline-panel');
 
     function showAjaxMessage(type, message) {
+      const alertClass = type === 'success'
+        ? 'alert-success'
+        : (type === 'info' ? 'alert-info' : 'alert-danger');
+
       alertBox
-        .removeClass('d-none alert-success alert-danger')
-        .addClass(type === 'success' ? 'alert-success' : 'alert-danger')
+        .removeClass('d-none alert-success alert-danger alert-info')
+        .addClass(alertClass)
         .text(message);
+    }
+
+    function refreshPipelinePanel() {
+      if (!pipelinePanel.length) {
+        return;
+      }
+
+      pipelinePanel.load(window.location.href + ' #zcm-pipeline-panel > *');
     }
 
     function escapeHtml(value) {
@@ -852,6 +908,43 @@
         complete: function () {
           button.prop('disabled', false).text(originalText);
           form.closest('.pipeline-image-item').removeClass('pipeline-image-working');
+        }
+      });
+    });
+
+    $(document).on('submit', '.js-run-stage-form', function (event) {
+      event.preventDefault();
+
+      const form = $(this);
+      const button = form.find('button[type="submit"]');
+      const originalText = button.text();
+
+      button.prop('disabled', true).text('A executar...');
+      showAjaxMessage('info', 'A executar etapa. Pode demorar alguns segundos...');
+
+      $.ajax({
+        url: form.attr('action'),
+        method: 'POST',
+        data: form.serialize(),
+        timeout: 190000,
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        success: function (response) {
+          showAjaxMessage('success', response.message || 'Etapa executada com sucesso.');
+          refreshPipelinePanel();
+        },
+        error: function (xhr) {
+          const message = xhr.responseJSON && xhr.responseJSON.message
+            ? xhr.responseJSON.message
+            : 'Nao foi possivel executar a etapa.';
+
+          showAjaxMessage('error', message);
+          refreshPipelinePanel();
+        },
+        complete: function () {
+          button.prop('disabled', false).text(originalText);
         }
       });
     });
