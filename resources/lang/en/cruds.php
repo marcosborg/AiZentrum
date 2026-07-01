@@ -279,6 +279,10 @@ return [
         'title'          => 'ZCManager',
         'title_singular' => 'ZCManager',
     ],
+    'zcmPendingAd' => [
+        'title'          => 'Anuncios pendentes',
+        'title_singular' => 'Anuncio pendente',
+    ],
     'aiTraining' => [
         'title'          => 'Ai Training',
         'title_singular' => 'Ai Training',

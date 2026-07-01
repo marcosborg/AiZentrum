@@ -177,7 +177,18 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
 
     Route::get('/zcm/dashboard', ZcmDashboardController::class)->name('zcm.dashboard');
     Route::get('/zcm/pending-ads', [ZcmPendingAdController::class, 'index'])->name('zcm.pending-ads.index');
+    Route::get('/zcm/pending-ads/export', [ZcmPendingAdController::class, 'export'])->name('zcm.pending-ads.export');
     Route::post('/zcm/pending-ads/sync', [ZcmPendingAdController::class, 'sync'])->name('zcm.pending-ads.sync');
+    Route::get('/zcm/pending-ads/{pendingAd}', [ZcmPendingAdController::class, 'show'])->name('zcm.pending-ads.show');
+    Route::get('/zcm/pending-ads/{pendingAd}/generated-image/{filename}', [ZcmPendingAdController::class, 'generatedImage'])->name('zcm.pending-ads.generated-image');
+    Route::post('/zcm/pending-ads/{pendingAd}/run-stage', [ZcmPendingAdController::class, 'runStage'])->name('zcm.pending-ads.run-stage');
+    Route::post('/zcm/pending-ads/{pendingAd}/recreate-image', [ZcmPendingAdController::class, 'recreateImage'])->name('zcm.pending-ads.recreate-image');
+    Route::post('/zcm/pending-ads/{pendingAd}/delete-generated-image', [ZcmPendingAdController::class, 'deleteGeneratedImage'])->name('zcm.pending-ads.delete-generated-image');
+    Route::post('/zcm/pending-ads/{pendingAd}/prestashop-draft/generate', [ZcmPendingAdController::class, 'generatePrestashopDraft'])->name('zcm.pending-ads.prestashop-draft.generate');
+    Route::post('/zcm/pending-ads/{pendingAd}/prestashop-draft', [ZcmPendingAdController::class, 'savePrestashopDraft'])->name('zcm.pending-ads.prestashop-draft.save');
+    Route::post('/zcm/pending-ads/{pendingAd}/approve', [ZcmPendingAdController::class, 'approve'])->name('zcm.pending-ads.approve');
+    Route::post('/zcm/pending-ads/{pendingAd}/reject', [ZcmPendingAdController::class, 'reject'])->name('zcm.pending-ads.reject');
+    Route::post('/zcm/pending-ads/{pendingAd}/request-changes', [ZcmPendingAdController::class, 'requestChanges'])->name('zcm.pending-ads.request-changes');
 });
 
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {

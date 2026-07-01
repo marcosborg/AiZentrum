@@ -39,6 +39,10 @@ return [
     ],
     'openai' => [
         'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        'web_search_model' => env('OPENAI_WEB_SEARCH_MODEL', env('OPENAI_MODEL', 'gpt-4o-mini')),
+        'web_search_tool' => env('OPENAI_WEB_SEARCH_TOOL', 'web_search'),
+        'image_edit_model' => env('OPENAI_IMAGE_EDIT_MODEL', 'gpt-image-1.5'),
     ],
     'ps' => [
         'url' => env('PS_API_URL', 'https://techniczentrum.com/api'),

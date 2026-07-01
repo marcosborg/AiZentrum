@@ -14,16 +14,21 @@
   <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
       <strong>An&uacute;ncios pendentes</strong>
-      <form method="post" action="{{ route('admin.zcm.pending-ads.sync') }}" class="mb-0">
-        @csrf
-        <input type="hidden" name="reference" value="{{ request('reference') }}">
-        <input type="hidden" name="user_id" value="{{ request('user_id') }}">
-        <input type="hidden" name="from" value="{{ request('from') }}">
-        <input type="hidden" name="per_page" value="{{ request('per_page') }}">
-        <button type="submit" class="btn btn-primary btn-sm" {{ $adsConfigured ? '' : 'disabled' }}>
-          <i class="fas fa-sync-alt"></i> Sync an&uacute;ncios pendentes
-        </button>
-      </form>
+      <div class="d-flex align-items-center">
+        <a href="{{ route('admin.zcm.pending-ads.export', request()->query()) }}" class="btn btn-success btn-sm mr-2">
+          <i class="fas fa-file-excel"></i> Exportar Excel
+        </a>
+        <form method="post" action="{{ route('admin.zcm.pending-ads.sync') }}" class="mb-0">
+          @csrf
+          <input type="hidden" name="reference" value="{{ request('reference') }}">
+          <input type="hidden" name="user_id" value="{{ request('user_id') }}">
+          <input type="hidden" name="from" value="{{ request('from') }}">
+          <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+          <button type="submit" class="btn btn-primary btn-sm" {{ $adsConfigured ? '' : 'disabled' }}>
+            <i class="fas fa-sync-alt"></i> Sync an&uacute;ncios pendentes
+          </button>
+        </form>
+      </div>
     </div>
     <div class="card-body">
       <form method="get" class="row mb-3">
@@ -52,15 +57,16 @@
               <th>ID ZCM</th>
               <th>Reference</th>
               <th>Title</th>
-              <th>Description</th>
               <th>Price</th>
               <th>Category</th>
               <th>Brand model</th>
-              <th>Images</th>
               <th>Requested by</th>
-              <th>Status</th>
+              <th>Status ZCM</th>
+              <th>Sync</th>
+              <th>Pipeline</th>
+              <th>Review</th>
               <th>Created at</th>
-              <th>Updated at</th>
+              <th>&nbsp;</th>
             </tr>
           </thead>
           <tbody>
@@ -69,29 +75,22 @@
                 <td>{{ $ad->zcmanager_ad_id }}</td>
                 <td>{{ $ad->reference }}</td>
                 <td>{{ $ad->title }}</td>
-                <td style="min-width: 260px;">{{ \Illuminate\Support\Str::limit($ad->description, 160) }}</td>
                 <td>{{ $ad->price !== null ? number_format((float) $ad->price, 2, ',', ' ') . ' EUR' : '' }}</td>
                 <td>{{ $ad->category }}</td>
-                <td>{{ $ad->brand_model }}</td>
-                <td>
-                  @foreach(($ad->images ?? []) as $image)
-                    @if(is_string($image))
-                      <a href="{{ $image }}" target="_blank" rel="noopener" class="badge badge-light">Imagem</a>
-                    @else
-                      <span class="badge badge-light">Imagem</span>
-                    @endif
-                  @endforeach
-                </td>
-                <td>{{ $ad->requested_by }}</td>
-                <td>
-                  <span class="badge badge-{{ $ad->sync_status === 'sent' ? 'success' : 'secondary' }}">{{ $ad->status ?: $ad->sync_status }}</span>
-                </td>
+                <td>{{ data_get($ad->brand_model_data, 'manufacturer') ?: \Illuminate\Support\Str::limit($ad->brand_model, 60) }}</td>
+                <td>{{ data_get($ad->requested_by_data, 'name') ?: $ad->requested_by }}</td>
+                <td><span class="badge badge-light">{{ $ad->status }}</span></td>
+                <td><span class="badge badge-{{ $ad->sync_status === 'sent' ? 'success' : ($ad->sync_status === 'mark_failed' ? 'danger' : 'secondary') }}">{{ $ad->sync_status }}</span></td>
+                <td><span class="badge badge-info">{{ $ad->pipeline_status_label }}</span></td>
+                <td><span class="badge badge-{{ $ad->review_status === 'approved' ? 'success' : ($ad->review_status === 'rejected' ? 'danger' : 'secondary') }}">{{ $ad->review_status_label }}</span></td>
                 <td>{{ optional($ad->zcmanager_created_at)->format('Y-m-d H:i') }}</td>
-                <td>{{ optional($ad->zcmanager_updated_at)->format('Y-m-d H:i') }}</td>
+                <td>
+                  <a href="{{ route('admin.zcm.pending-ads.show', $ad) }}" class="btn btn-xs btn-primary">Ver</a>
+                </td>
               </tr>
             @empty
               <tr>
-                <td colspan="12" class="text-center text-muted">Sem an&uacute;ncios importados.</td>
+                <td colspan="13" class="text-center text-muted">Sem an&uacute;ncios importados.</td>
               </tr>
             @endforelse
           </tbody>

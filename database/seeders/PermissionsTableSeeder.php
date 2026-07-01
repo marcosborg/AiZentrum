@@ -310,6 +310,18 @@ class PermissionsTableSeeder extends Seeder
                 'id'    => 75,
                 'title' => 'zcm_access',
             ],
+            [
+                'id'    => 76,
+                'title' => 'zcm_pending_ad_access',
+            ],
+            [
+                'id'    => 77,
+                'title' => 'zcm_pending_ad_review',
+            ],
+            [
+                'id'    => 78,
+                'title' => 'zcm_pending_ad_export',
+            ],
         ];
 
         Permission::insert($permissions);
