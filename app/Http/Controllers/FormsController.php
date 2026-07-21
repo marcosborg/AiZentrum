@@ -85,7 +85,7 @@ class FormsController extends Controller
         $form_data->data = json_decode($form_data->data);
 
         try {
-            Notification::route('mail', env('COMERCIAL_EMAIL'))
+            Notification::route('mail', config('mail.commercial_address'))
                 ->notify(new \App\Notifications\FormSubmit($form_data));
         } catch (\Throwable $exception) {
             Log::error('Public form email delivery failed', [

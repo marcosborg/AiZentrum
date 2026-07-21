@@ -18,7 +18,10 @@ trait Iftech
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => array('email' => env('IFTECH_LOGIN'), 'password' => env('IFTECH_PASSWORD')),
+            CURLOPT_POSTFIELDS => array(
+                'email' => config('services.iftech.login'),
+                'password' => config('services.iftech.password'),
+            ),
         ));
 
         $response = curl_exec($curl);

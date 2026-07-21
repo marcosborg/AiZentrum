@@ -54,4 +54,8 @@ return [
         'manager_base' => env('ZCMANAGER_API_URL', 'https://zcmanager.com'),
         'manager_token' => env('ZCMANAGER_API_TOKEN'),
     ],
+    'iftech' => [
+        'login' => env('IFTECH_LOGIN'),
+        'password' => env('IFTECH_PASSWORD'),
+    ],
 ];

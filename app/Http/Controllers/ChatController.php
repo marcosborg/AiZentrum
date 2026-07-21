@@ -127,7 +127,7 @@ class ChatController extends Controller
     {
         $data = $request->data;
 
-        Notification::route('mail', env('COMERCIAL_EMAIL'))
+        Notification::route('mail', config('mail.commercial_address'))
             ->notify(new ChatContact($data));
     }
 
