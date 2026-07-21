@@ -63,6 +63,7 @@ sudo -u www-data git -C "${REPOSITORY}" archive "${COMMIT}" | tar -x -C "${TEMP_
 rm -rf "${TEMP_RELEASE}/storage" "${TEMP_RELEASE}/public/images" "${TEMP_RELEASE}/public/exports"
 ln -s "${SHARED}/.env" "${TEMP_RELEASE}/.env"
 ln -s "${SHARED}/storage" "${TEMP_RELEASE}/storage"
+ln -s "${SHARED}/storage/app/public" "${TEMP_RELEASE}/public/storage"
 ln -s "${SHARED}/public/images" "${TEMP_RELEASE}/public/images"
 ln -s "${SHARED}/public/exports" "${TEMP_RELEASE}/public/exports"
 

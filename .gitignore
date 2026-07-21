@@ -1,7 +1,9 @@
 .env
+node_modules/
 public/storage
 public/exports/
 storage/app/db-sync/*.sql
+storage/app/db-sync/*.sql.gz
 storage/app/public/
 storage/app/moloni_tokens.json
 .ftpquota
