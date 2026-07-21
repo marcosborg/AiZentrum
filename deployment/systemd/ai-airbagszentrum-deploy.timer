@@ -1,0 +1,11 @@
+[Unit]
+Description=Check AiZentrum main branch for deployments
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+RandomizedDelaySec=10s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
