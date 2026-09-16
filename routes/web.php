@@ -205,6 +205,8 @@ Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 
 Route::post('ai-messages/search', [App\Http\Controllers\Admin\AiMessageController::class, 'search'])->name('ai-messages.search');
 
 Route::prefix('chat')->group(function () {
+    Route::get('response/{assistant}', 'PublicChatController@history');
+    Route::post('response/{assistant}', 'PublicChatController@message')->middleware('throttle:15,1')->block(180, 5);
     Route::get('/assistant/{assistant_id}', 'WebsiteController@assistant');
     Route::get('create-assistant/{project_name}', 'ChatController@chatCreateAssistant');
     Route::post('create-thread-and-run', 'ChatController@chatCreateThreadAndRun');
