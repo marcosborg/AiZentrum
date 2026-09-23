@@ -1,4 +1,4 @@
-## Produção AWS — 2026-09-16
+## Produção AWS — 2026-09-23
 
 O atendimento telefónico corre integralmente na AWS, sem túnel SSH nem PC ligado.
 Serviço systemd: `aizentrum-voice` (enabled, restart automático).
@@ -7,9 +7,21 @@ Credenciais: `/etc/aizentrum-voice/voice.env`, acesso limitado a root e ao servi
 Node: `/usr/local/bin/node`. Portas internas: 9019 AudioSocket, 9020 health.
 Trunk: 13.38.206.137:5060 UDP, alaw, origem autorizada 194.38.128.79.
 A unidade está em `deployment/asterisk/aizentrum-voice.service`.
+O editor de produção partilha `storage/app/voice/instructions.txt` com o serviço telefónico
+através do link `/etc/aizentrum-voice/instructions.txt`. Novas chamadas leem a última versão.
 Alterações no editor local não sincronizam automaticamente para produção.
 Deploy de voz independente do deploy Laravel; não é atualizado pelo push main.
-Não guarda nem envia reclamações, gravações ou transcrições.
+As reclamações elegíveis e confirmadas são guardadas em `voice_complaints` e enviadas
+por SMTP para `geral@zentrum-group.com`. Não se guardam gravações nem transcrições completas.
+Uma submissão por UUID de conversa; `needs_review`/`sending` não são reenviados automaticamente,
+pois um timeout pode deixar a entrega incerta. Consultar o registo e o SMTP antes de reenviar.
+O endpoint `/api/voice/complaints` exige `VOICE_SUBMISSION_TOKEN`, partilhado apenas
+pelos ambientes Laravel e Node. `VOICE_SUBMISSION_URL` aponta para esse endpoint HTTPS.
+`VOICE_RUNTIME_PATH=/opt/aizentrum-voice/runtime.json` contém voz, velocidade, VAD e ferramentas.
+Deploy Node: instalar juntos `server.mjs`, `tools.mjs` e `resources/voice/runtime.json`,
+e reiniciar `aizentrum-voice` apenas sem chamadas ativas. Preservar backup para rollback.
+O Laravel usa o mesmo JSON versionado; enviar todos os ficheiros na mesma versão.
+`responseLatency` no health mede fim do VAD até ao primeiro áudio, excluindo espera do VAD/rede telefónica.
 Validado: serviço ativo, API aceite, áudio bidirecional em chamada interna.
 Pendente: validação auditiva por chamada real depois desta migração.
 Rollback: parar `aizentrum-voice` na AWS e repor o túnel para o serviço local.

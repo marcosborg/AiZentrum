@@ -4,12 +4,16 @@ import http from 'node:http';
 import WebSocket from 'ws';
 import codecs from 'alawmulaw';
 import { readFileSync, existsSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { executeVoiceTool } from './tools.mjs';
+
+const runtime = JSON.parse(readFileSync(process.env.VOICE_RUNTIME_PATH || new URL('../resources/voice/runtime.json', import.meta.url), 'utf8'));
 
 function instructions() {
   const saved = process.env.VOICE_INSTRUCTIONS_PATH || new URL('../storage/app/voice/instructions.txt', import.meta.url);
   const fallback = new URL('../resources/voice/complaints.txt', import.meta.url);
   const context = process.env.VOICE_ENV === 'production'
-    ? '\nCONTEXTO DE PRODUÇÃO: Identifica-te como assistente de inteligência artificial, sem dizer que é um teste. Não existem ferramentas para guardar ou enviar reclamações ou transferir chamadas; nunca afirmes ter executado essas ações.'
+    ? '\nCONTEXTO DE PRODUÇÃO: Identifica-te como assistente de inteligência artificial, sem anunciar testes. Usa submit_complaint para guardar e enviar o resumo para geral@zentrum-group.com apenas após triagem de origem Zentrum, garantia e confirmação final do cliente. Só confirma envio com sent=true. Não tens consulta de faturas/garantia nem transferência. Usa ignore_background_audio para ruído, sem responder.'
     : '\nCONTEXTO: Esta é uma chamada de teste. Identifica-te como IA em teste. Não existem ferramentas para guardar ou enviar reclamações ou transferir chamadas; nunca afirmes ter executado essas ações.';
   return readFileSync(existsSync(saved) ? saved : fallback, 'utf8') + context;
 }
@@ -27,6 +31,7 @@ let active = 0;
 let completed = 0;
 let lastError = null;
 const stats = { receivedBytes: 0, sentBytes: 0, mutedInputBytes: 0, sessionsReady: 0, speechStarts: 0, responsesCreated: 0, responsesCancelled: 0, rejectedBusy: 0 };
+const latency = { samples: 0, lastMs: null, totalMs: 0 };
 const packet = (type, data) => {
   const header = Buffer.alloc(3);
   header[0] = type;
@@ -50,6 +55,8 @@ net.createServer(socket => {
   let buffer = Buffer.alloc(0), output = Buffer.alloc(0), pending = [];
   let ws, ready = false, identified = false, itemId, played = 0;
   let closed = false;
+  const sessionId = randomUUID(), handledTools = new Set();
+  let toolPending = false, speechStoppedAt = null;
   let assistantSpeaking = true, responseDone = false, listenAfter = 0;
   const send = event => { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(event)); };
   const fail = code => { lastError = code; console.error(code); socket.destroy(); };
@@ -58,7 +65,7 @@ net.createServer(socket => {
   // Pace by elapsed time: Windows timers can wake later than requested.
   let nextFrameAt = null;
   const playback = setInterval(() => {
-    if (assistantSpeaking && responseDone && !output.length) {
+    if (assistantSpeaking && responseDone && !output.length && !toolPending) {
       if (!listenAfter) listenAfter = performance.now() + 350;
       if (performance.now() >= listenAfter) {
         assistantSpeaking = false;
@@ -92,12 +99,13 @@ net.createServer(socket => {
     ws.on('open', () => send({ type: 'session.update', session: {
       type: 'realtime', output_modalities: ['audio'],
       instructions: instructions(),
+      tools: process.env.VOICE_ENV === 'production' ? runtime.tools : [runtime.tools[0]],
       audio: {
-        input: { format: { type: 'audio/pcmu' }, noise_reduction: { type: 'near_field' }, turn_detection: { type: 'server_vad', threshold: 0.75, prefix_padding_ms: 300, silence_duration_ms: 1200, create_response: true, interrupt_response: false } },
-        output: { format: { type: 'audio/pcmu' }, voice: 'cedar' },
+        input: { format: { type: 'audio/pcmu' }, ...runtime.audio.input },
+        output: { format: { type: 'audio/pcmu' }, ...runtime.audio.output },
       },
     } }));
-    ws.on('message', raw => {
+    ws.on('message', async raw => {
       let event;
       try { event = JSON.parse(raw.toString()); } catch { return fail('invalid_api_event'); }
       if (event.type === 'error') return fail(`openai_${event.error?.code || 'error'}`);
@@ -117,8 +125,29 @@ net.createServer(socket => {
       if (event.type === 'response.done') {
         responseDone = true;
         if (event.response?.status === 'cancelled') stats.responsesCancelled++;
+        const calls = event.response?.status === 'completed'
+          ? (event.response.output || []).filter(item => item.type === 'function_call' && !handledTools.has(item.call_id)) : [];
+        if (calls.length) {
+          toolPending = true;
+          let reply = false;
+          for (const call of calls) {
+            handledTools.add(call.call_id);
+            const result = await executeVoiceTool(call, sessionId);
+            send({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: call.call_id, output: JSON.stringify(result) } });
+            if (call.name !== 'ignore_background_audio') reply = true;
+          }
+          toolPending = false;
+          if (reply && !closed) {
+            responseDone = false;
+            send({ type: 'response.create' });
+          }
+        }
       }
       if (event.type === 'response.output_audio.delta') {
+        if (speechStoppedAt !== null) {
+          latency.lastMs = Math.round(performance.now() - speechStoppedAt);
+          latency.totalMs += latency.lastMs; latency.samples++; speechStoppedAt = null;
+        }
         if (event.item_id !== itemId) { itemId = event.item_id; played = 0; }
         const samples = codecs.mulaw.decode(Buffer.from(event.delta, 'base64'));
         const pcm = Buffer.alloc(samples.length * 2);
@@ -128,6 +157,7 @@ net.createServer(socket => {
       if (event.type === 'input_audio_buffer.speech_started') {
         stats.speechStarts++;
       }
+      if (event.type === 'input_audio_buffer.speech_stopped') speechStoppedAt = performance.now();
       if (event.type === 'response.done' && event.response?.status === 'failed') fail('response_failed');
     });
     ws.on('error', () => fail('openai_connection_error'));
@@ -175,5 +205,6 @@ net.createServer(socket => {
 http.createServer((req, res) => {
   if (req.url !== '/health') { res.writeHead(404); return res.end(); }
   res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify({ mode, model, active, completed, lastError, ...stats }));
+  res.end(JSON.stringify({ mode, model, active, completed, lastError, ...stats, voice: runtime.audio.output.voice, speed: runtime.audio.output.speed,
+    vad: runtime.audio.input.turn_detection, responseLatency: {samples:latency.samples,lastMs:latency.lastMs,averageMs:latency.samples ? Math.round(latency.totalMs/latency.samples) : null} }));
 }).listen(healthPort, '127.0.0.1');

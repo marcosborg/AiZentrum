@@ -20,6 +20,7 @@ Auth::routes(['register' => false]);
 
 Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'middleware' => ['auth']], function () {
     Route::get('voice-test', 'VoiceTestController@index')->name('voice-test');
+    Route::post('voice-test/complaint', '\App\Http\Controllers\VoiceComplaintController@browser')->middleware([\App\Http\Middleware\VerifyCsrfToken::class, 'throttle:10,1'])->name('voice-test.complaint');
     Route::put('voice-test/instructions', 'VoiceTestController@saveInstructions')->middleware([\App\Http\Middleware\VerifyCsrfToken::class, 'throttle:20,1'])->name('voice-test.instructions');
     Route::post('voice-test/session', 'VoiceTestController@session')->middleware([\App\Http\Middleware\VerifyCsrfToken::class, 'throttle:6,1'])->name('voice-test.session');
     Route::get('/', 'HomeController@index')->name('home');

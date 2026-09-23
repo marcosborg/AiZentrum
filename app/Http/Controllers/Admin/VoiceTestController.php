@@ -34,6 +34,7 @@ class VoiceTestController extends Controller
             return response()->json(['message' => 'A chave OpenAI não está configurada.'], 503);
         }
         try {
+            $runtime = json_decode(file_get_contents(resource_path('voice/runtime.json')), true, 512, JSON_THROW_ON_ERROR);
             $response = Http::withToken(config('openai.api_key'))->timeout(25)
                 ->attach('sdp', $sdp)
                 ->attach('session', json_encode([
@@ -41,13 +42,13 @@ class VoiceTestController extends Controller
                     'model' => config('openai.realtime_model', 'gpt-realtime'),
                     'output_modalities' => ['audio'],
                     'instructions' => app(\App\Services\VoiceInstructions::class)->forSession(),
+                    'tools' => app()->environment('production') ? $runtime['tools'] : [$runtime['tools'][0]],
                     'audio' => [
                         'input' => [
                             'transcription' => ['model' => 'gpt-4o-mini-transcribe', 'language' => 'pt'],
-                            'noise_reduction' => ['type' => 'near_field'],
-                            'turn_detection' => ['type' => 'server_vad', 'threshold' => 0.75, 'prefix_padding_ms' => 300, 'silence_duration_ms' => 1200, 'create_response' => true, 'interrupt_response' => false],
+                            ...$runtime['audio']['input'],
                         ],
-                        'output' => ['voice' => 'cedar'],
+                        'output' => $runtime['audio']['output'],
                     ],
                 ]))->post('https://api.openai.com/v1/realtime/calls');
             if (!$response->successful()) {
@@ -66,7 +67,9 @@ class VoiceTestController extends Controller
                 };
                 return response()->json(['message' => $message], 502);
             }
-            return response($response->body(), 200, ['Content-Type' => 'application/sdp', 'Cache-Control' => 'no-store']);
+            $id = (string) \Illuminate\Support\Str::uuid();
+            if ($request->hasSession()) $request->session()->put('voice_sessions.'.$id, time());
+            return response($response->body(), 200, ['Content-Type' => 'application/sdp', 'Cache-Control' => 'no-store', 'X-Voice-Session' => $id]);
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             return response()->json(['message' => 'A ligação à OpenAI demorou demasiado. Tenta novamente.'], 504);
         }

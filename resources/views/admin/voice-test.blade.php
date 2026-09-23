@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 @section('content')
-<div id="voice-test" data-session-url="{{ route('admin.voice-test.session') }}" style="max-width:1000px;margin:auto">
+<div id="voice-test" data-session-url="{{ route('admin.voice-test.session') }}" data-complaint-url="{{ route('admin.voice-test.complaint') }}" style="max-width:1000px;margin:auto">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div><h1 class="h3 mb-1">Testar atendimento</h1><span class="text-muted">Techniczentrum · Electriczentrum</span></div>
         <span class="badge badge-info p-2">Teste de voz</span>
@@ -12,7 +12,7 @@
             <form id="voice-instructions-form" action="{{ route('admin.voice-test.instructions') }}">
                 <label for="voice-instructions">Instruções específicas</label>
                 <textarea id="voice-instructions" class="form-control" rows="16" maxlength="20000" required aria-describedby="voice-instructions-help">{{ $instructions }}</textarea>
-                <p id="voice-instructions-help" class="small text-muted mt-2">Configuração inicial preparada para peças e reparações. Este teste continua sem guardar reclamações nem efetuar transferências.</p>
+                <p id="voice-instructions-help" class="small text-muted mt-2">Em produção, o resumo confirmado é guardado e enviado para geral@zentrum-group.com. Não são efetuadas transferências de chamadas.</p>
                 <button id="voice-instructions-save" type="submit" class="btn btn-primary">Guardar instruções</button>
                 <span id="voice-instructions-status" role="status" aria-live="polite" class="ml-2"></span>
             </form>
@@ -21,7 +21,7 @@
     <div class="card"><div class="card-body">
         <h2 class="h5">Converse com o assistente</h2>
         <p>Teste uma reclamação sobre uma peça ou reparação. Use auscultadores para evitar eco.</p>
-        <p class="small text-muted">Ao iniciar, o microfone envia áudio à OpenAI para gerar as respostas. A transcrição fica apenas nesta página; nenhuma reclamação é guardada ou enviada.</p>
+        <p class="small text-muted">O microfone envia áudio à OpenAI. A transcrição fica nesta página. Em produção, uma reclamação elegível e confirmada gera um resumo guardado e enviado por email para geral@zentrum-group.com; os testes neste painel também podem enviar emails reais.</p>
         <div class="d-flex flex-wrap align-items-center" style="gap:12px">
             <button id="voice-start" class="btn btn-primary"><i class="fas fa-microphone mr-2"></i>Iniciar conversa</button>
             <button id="voice-stop" class="btn btn-outline-danger" disabled>Terminar</button>

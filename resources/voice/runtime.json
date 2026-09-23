@@ -1,0 +1,10 @@
+{
+  "audio": {
+    "input": {"noise_reduction":{"type":"near_field"},"turn_detection":{"type":"server_vad","threshold":0.85,"prefix_padding_ms":300,"silence_duration_ms":800,"create_response":true,"interrupt_response":false}},
+    "output": {"voice":"marin","speed":0.85}
+  },
+  "tools": [
+    {"type":"function","name":"ignore_background_audio","description":"Fica em silêncio quando só há ruído, televisão, conversa de fundo ou áudio ininteligível sem uma resposta dirigida ao assistente. Não inventes palavras nem referências.","parameters":{"type":"object","properties":{},"required":[],"additionalProperties":false}},
+    {"type":"function","name":"submit_complaint","description":"Envia a reclamação para geral@zentrum-group.com apenas após confirmar origem Zentrum, garantia e o resumo final com o cliente. Uma submissão por conversa. Nunca envia casos fora da triagem. Só confirma envio quando o resultado for sent=true.","parameters":{"type":"object","properties":{"zentrum_origin":{"type":"boolean"},"under_warranty":{"type":"boolean"},"customer_confirmed":{"type":"boolean"},"customer_name":{"type":"string"},"contact":{"type":"string"},"part":{"type":"string"},"summary":{"type":"string","description":"Resumo factual: problema, dados fornecidos, matrícula/referência se conhecidas, verificações e solução pretendida. Identifica dados incertos; nunca inventes."}},"required":["zentrum_origin","under_warranty","customer_confirmed","customer_name","contact","part","summary"],"additionalProperties":false}}
+  ]
+}

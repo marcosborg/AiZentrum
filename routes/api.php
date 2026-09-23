@@ -1,4 +1,5 @@
 <?php
+Route::post('/voice/complaints', 'VoiceComplaintController@phone')->middleware('throttle:10,1');
 
 use App\Http\Controllers\RefSearchController;
 

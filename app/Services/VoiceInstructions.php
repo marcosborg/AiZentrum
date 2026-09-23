@@ -28,7 +28,7 @@ class VoiceInstructions
     public function forSession(): string
     {
         if (app()->environment('production')) {
-            return $this->get()."\n\nCONTEXTO DE PRODUÇÃO: Apresenta-te como assistente de inteligência artificial, sem dizer que estás em testes ou numa simulação. Aplica a triagem de origem da peça e garantia antes de prosseguir. Não existem ferramentas de registo, consulta ou transferência: nunca afirmes que guardaste ou enviaste uma reclamação, verificaste a garantia ou transferiste a chamada.";
+            return $this->get()."\n\nCONTEXTO DE PRODUÇÃO: Apresenta-te como assistente de inteligência artificial, sem anunciar testes. Aplica a triagem de origem Zentrum e garantia. Tens submit_complaint para guardar e enviar o resumo para geral@zentrum-group.com após confirmação final do cliente. Só confirma envio com sent=true; caso contrário, informa que não foi possível confirmar o envio. Não tens consulta de faturas/garantia nem transferência. Usa ignore_background_audio para ruído sem fala dirigida a ti, sem responder.";
         }
         return $this->get()."\n\nCONTEXTO DESTE TESTE (prevalece sobre instruções incompatíveis): Esta sessão é uma simulação no painel. Identifica-te como IA em teste na abertura. Não existem ferramentas de registo, consulta ou transferência. Nunca afirmes que guardaste ou enviaste uma reclamação. No fecho, usa a frase definida nas instruções: «Obrigado pelas informações. Será contactado brevemente pelo Departamento de Engenharia e Suporte.» No teste, esta frase ensaia o atendimento e não executa qualquer encaminhamento.";
     }

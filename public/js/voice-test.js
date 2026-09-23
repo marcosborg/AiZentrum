@@ -71,7 +71,7 @@
     function resumeInput(s) {
         clearTimeout(s.listenTimer);
         s.listenTimer = setTimeout(() => {
-            if (current !== s) return;
+            if (current !== s || s.toolPending) return;
             s.stream.getAudioTracks().forEach(track => { track.enabled = true; });
             el('status').textContent = 'À escuta · pode falar';
         }, 350);
@@ -80,7 +80,7 @@
     window.addEventListener('pagehide', () => stop());
     el('start').onclick = async () => {
         if (current) return;
-        const s = { abort: new AbortController() }; current = s;
+        const s = { abort: new AbortController(), handledTools: new Set() }; current = s;
         el('start').disabled = true; el('stop').disabled = false;
         el('error').hidden = true; el('status').textContent = 'A pedir acesso ao microfone…';
         rows.clear(); conversation.clear(); el('transcript').replaceChildren(); el('empty').hidden = false; el('timer').textContent = '00:00';
@@ -115,7 +115,7 @@
                 dc.send(JSON.stringify({ type: 'response.create' }));
             };
             dc.onclose = () => { if (current === s) stop('Ligação terminada'); };
-            dc.onmessage = event => {
+            dc.onmessage = async event => {
                 if (current !== s) return;
                 let e; try { e = JSON.parse(event.data); } catch { return; }
                 if (e.type === 'error') return fail('O serviço de voz devolveu um erro. Tenta iniciar novamente.');
@@ -131,6 +131,37 @@
                 if (['output_audio_buffer.stopped', 'output_audio_buffer.cleared'].includes(e.type)
                     && e.response_id === s.responseId) resumeInput(s);
                 renderTranscript(e);
+                if (e.type === 'response.done' && e.response?.status === 'completed') {
+                    const calls = (e.response.output || []).filter(item => item.type === 'function_call' && !s.handledTools.has(item.call_id));
+                    if (calls.length) {
+                        s.toolPending = true;
+                        muteInput(s, 'A tratar o pedido…');
+                        let reply = false;
+                        for (const call of calls) {
+                            s.handledTools.add(call.call_id);
+                            let result = { ignored: true };
+                            if (call.name !== 'ignore_background_audio') {
+                                reply = true;
+                                result = { sent: false, status: 'unavailable' };
+                                try {
+                                    if (call.name !== 'submit_complaint' || !s.sessionId) throw new Error('Unknown tool');
+                                    const response = await fetch(root.dataset.complaintUrl, {
+                                        method: 'POST', signal: AbortSignal.timeout(20000),
+                                        headers: { 'Content-Type':'application/json', Accept:'application/json', 'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content },
+                                        body: JSON.stringify({session_id:s.sessionId, arguments:JSON.parse(call.arguments)}),
+                                    });
+                                    if (response.ok) result = await response.json();
+                                } catch {}
+                            }
+                            if (current !== s || dc.readyState !== 'open') return;
+                            dc.send(JSON.stringify({type:'conversation.item.create',item:{type:'function_call_output',call_id:call.call_id,output:JSON.stringify(result)}}));
+                        }
+                        s.toolPending = false;
+                        if (reply) dc.send(JSON.stringify({type:'response.create'}));
+                        else resumeInput(s);
+                        return;
+                    }
+                }
                 if (e.type === 'response.done' && e.response?.status === 'failed') fail('Não foi possível gerar a resposta. Verifica o acesso à API.');
                 else if (e.type === 'response.done' && e.response?.id === s.responseId
                     && !(e.response.output || []).some(item => (item.content || []).some(part => ['audio', 'output_audio'].includes(part.type)))) resumeInput(s);
@@ -147,6 +178,7 @@
                 throw new Error(response.status === 419 || response.status === 401 ? 'A sessão expirou. Atualiza a página e entra novamente.' : data.message || 'Não foi possível ligar. Tenta novamente dentro de um minuto.');
             }
             const sdp = await response.text();
+            s.sessionId = response.headers?.get('X-Voice-Session');
             if (current !== s) return;
             await pc.setRemoteDescription({ type: 'answer', sdp });
         } catch (error) {
