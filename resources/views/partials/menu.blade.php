@@ -7,6 +7,13 @@
     </div>
 
     <ul class="c-sidebar-nav">
+        @can('user_management_access')
+        <li class="c-sidebar-nav-item">
+            <a href="{{ route('admin.voice-test') }}" class="c-sidebar-nav-link {{ request()->is('admin/voice-test*') ? 'c-active' : '' }}">
+                <i class="c-sidebar-nav-icon fas fa-microphone"></i> Testar atendimento
+            </a>
+        </li>
+        @endcan
         <li class="c-sidebar-nav-item">
             <a href="{{ route("admin.home") }}" class="c-sidebar-nav-link">
                 <i class="c-sidebar-nav-icon fas fa-fw fa-tachometer-alt">

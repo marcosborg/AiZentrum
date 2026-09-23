@@ -19,6 +19,9 @@ Route::get('/home', function () {
 Auth::routes(['register' => false]);
 
 Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'middleware' => ['auth']], function () {
+    Route::get('voice-test', 'VoiceTestController@index')->name('voice-test');
+    Route::put('voice-test/instructions', 'VoiceTestController@saveInstructions')->middleware([\App\Http\Middleware\VerifyCsrfToken::class, 'throttle:20,1'])->name('voice-test.instructions');
+    Route::post('voice-test/session', 'VoiceTestController@session')->middleware([\App\Http\Middleware\VerifyCsrfToken::class, 'throttle:6,1'])->name('voice-test.session');
     Route::get('/', 'HomeController@index')->name('home');
     // Permissions
     Route::delete('permissions/destroy', 'PermissionsController@massDestroy')->name('permissions.massDestroy');
