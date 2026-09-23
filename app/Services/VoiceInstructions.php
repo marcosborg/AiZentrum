@@ -17,7 +17,10 @@ class VoiceInstructions
 
     public function save(string $instructions): void
     {
-        Storage::disk('local')->makeDirectory('voice');
+        // Do not reset the shared directory's setgid/read permissions on every save.
+        if (!Storage::disk('local')->directoryExists('voice')) {
+            Storage::disk('local')->makeDirectory('voice');
+        }
         // New calls must never read a partially written prompt.
         \Illuminate\Support\Facades\File::replace(Storage::disk('local')->path(self::PATH), $instructions, 0640);
     }
