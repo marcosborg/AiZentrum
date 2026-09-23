@@ -42,6 +42,18 @@ class VoiceTestTest extends TestCase
         $this->putJson('/admin/voice-test/instructions', ['instructions' => 'alteração'])->assertUnauthorized();
     }
 
+    public function test_production_instructions_do_not_force_a_test_greeting(): void
+    {
+        $this->app->instance('env', 'production');
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $service = app(\App\Services\VoiceInstructions::class);
+        $service->save('Apresenta-te como assistente virtual da Zentrum.');
+        $instructions = $service->forSession();
+        $this->assertStringContainsString('CONTEXTO DE PRODUÇÃO', $instructions);
+        $this->assertStringNotContainsString('Identifica-te como IA em teste na abertura', $instructions);
+        $this->assertStringNotContainsString('Será contactado brevemente', $instructions);
+    }
+
     public function test_guest_cannot_start_a_voice_session(): void
     {
         Http::fake();
