@@ -47,7 +47,7 @@ class VoiceComplaint
         }
         $body = "Pedido de suporte recebido pelo atendimento de voz\nReferência: $id\nCanal: $channel\n\n";
         foreach (['customer_name'=>'Nome','contact'=>'Contacto','part'=>'Peça','summary'=>'Resumo'] as $key=>$label) $body .= "$label: {$payload[$key]}\n\n";
-        $body .= "Origem Zentrum e garantia declaradas pelo cliente; sujeitas a validação pela equipa. Resumo confirmado pelo cliente.\n";
+        $body .= "Origem Zentrum e garantia declaradas pelo cliente; sujeitas a validação pela equipa. Envio autorizado pelo cliente.\n";
         try {
             // Do not use a log/array fallback and then claim that an email was sent.
             Mail::mailer('smtp')->raw($body, fn ($message) => $message

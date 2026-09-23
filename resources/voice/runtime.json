@@ -33,7 +33,7 @@
     {
       "type": "function",
       "name": "submit_complaint",
-      "description": "Envia a reclamação para geral@zentrum-group.com apenas após confirmar origem Zentrum, garantia e o resumo final com o cliente. Uma submissão por conversa. Nunca envia casos fora da triagem. Só confirma envio quando o resultado for sent=true. Só envia se a recolha for suficiente: nome, contacto utilizável, peça identificada e problema claro, sem contradições essenciais. Caso contrário, pede apenas o dado essencial em falta; não envies conversa incompleta.",
+      "description": "Envia a reclamação para geral@zentrum-group.com apenas após confirmar origem Zentrum, garantia e obter autorização de envio do cliente. Uma submissão por conversa. Nunca envia casos fora da triagem. Só confirma envio quando o resultado for sent=true. Só envia se a recolha for suficiente: nome, contacto utilizável, peça identificada e problema claro, sem contradições essenciais. Caso contrário, pede apenas o dado essencial em falta; não envies conversa incompleta.",
       "parameters": {
         "type": "object",
         "properties": {
