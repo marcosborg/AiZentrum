@@ -75,4 +75,29 @@ class VoiceComplaintTest extends TestCase
             'session_id'=>$this->id,'arguments'=>array_replace($this->payload(), ['under_warranty'=>false]),
         ])->assertUnprocessable();
     }
+    public function test_priority_callback_accepts_incomplete_intake_and_only_sends_once(): void {
+        $mailer = \Mockery::mock();
+        Mail::shouldReceive('mailer')->once()->with('smtp')->andReturn($mailer);
+        $mailer->shouldReceive('raw')->once()->andReturnUsing(function ($body, $callback) {
+            $this->assertStringContainsString('CONTACTO PRIORITÁRIO SOLICITADO', $body);
+            $this->assertStringNotContainsString('garantia declaradas pelo cliente', $body);
+            $message = \Mockery::mock();
+            $message->shouldReceive('to')->with('geral@zentrum-group.com')->andReturnSelf();
+            $message->shouldReceive('subject')->with(\Mockery::on(fn($subject)=>str_starts_with($subject,'Pedido de suporte · Contacto prioritário ·')))->andReturnSelf();
+            $callback($message);
+        });
+        $data = array_replace($this->payload(), ['request_type'=>'priority_callback','zentrum_origin'=>false,'under_warranty'=>false,'customer_name'=>'Não indicado','part'=>'Não indicado','contact'=>'+351 912 345 678','summary'=>'Cliente pede ajuda humana; questionário interrompido após manifestar insatisfação.','collection_assessment'=>'Cliente autorizou contacto humano e forneceu telefone utilizável.']);
+        $service = new VoiceComplaint;
+        $this->assertTrue($service->submit($this->id,$data,'phone')['sent']);
+        $this->assertTrue($service->submit($this->id,$data,'phone')['duplicate']);
+    }
+    public function test_priority_callback_requires_phone_and_consent(): void {
+        Mail::shouldReceive('mailer')->never();
+        foreach (['contact'=>'cliente@example.com','customer_confirmed'=>false] as $field=>$value) {
+            try {
+                (new VoiceComplaint)->submit($this->id,array_replace($this->payload(),['request_type'=>'priority_callback','contact'=>'912345678'],[$field=>$value]),'phone');
+                $this->fail('Callback without phone/consent accepted');
+            } catch (ValidationException $e) { $this->assertArrayHasKey($field,$e->errors()); }
+        }
+    }
 }

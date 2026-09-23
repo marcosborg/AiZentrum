@@ -11,7 +11,7 @@
             <p class="text-muted mt-3">Edite o comportamento, as perguntas e as regras do assistente. Em produção, as alterações guardadas aplicam-se às novas chamadas telefónicas e aos testes deste painel. As chamadas em curso mantêm as instruções anteriores.</p>
             <form id="voice-instructions-form" action="{{ route('admin.voice-test.instructions') }}">
                 <label for="voice-instructions">Instruções específicas</label>
-                <textarea id="voice-instructions" class="form-control" rows="16" maxlength="20000" required aria-describedby="voice-instructions-help">{{ $instructions }}</textarea>
+                <textarea id="voice-instructions" class="form-control" rows="16" maxlength="24000" required aria-describedby="voice-instructions-help">{{ $instructions }}</textarea>
                 <p id="voice-instructions-help" class="small text-muted mt-2">Em produção, o resumo confirmado é guardado e enviado para geral@zentrum-group.com. Não são efetuadas transferências de chamadas.</p>
                 <button id="voice-instructions-save" type="submit" class="btn btn-primary">Guardar instruções</button>
                 <span id="voice-instructions-status" role="status" aria-live="polite" class="ml-2"></span>

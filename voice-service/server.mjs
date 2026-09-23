@@ -13,7 +13,7 @@ function instructions() {
   const saved = process.env.VOICE_INSTRUCTIONS_PATH || new URL('../storage/app/voice/instructions.txt', import.meta.url);
   const fallback = new URL('../resources/voice/complaints.txt', import.meta.url);
   const context = process.env.VOICE_ENV === 'production'
-    ? '\nCONTEXTO DE PRODUÇÃO: Identifica-te como assistente de inteligência artificial, sem anunciar testes. Usa submit_complaint para guardar e enviar o resumo para geral@zentrum-group.com apenas após triagem de origem Zentrum, garantia e autorização final de envio do cliente. Só confirma envio com sent=true. Não tens consulta de faturas/garantia nem transferência. Usa ignore_background_audio para ruído, sem responder.'
+    ? '\nCONTEXTO DE PRODUÇÃO: Identifica-te como assistente de inteligência artificial, sem anunciar testes. Usa submit_complaint para guardar e enviar o resumo para geral@zentrum-group.com apenas após triagem de origem Zentrum, garantia e autorização final de envio do cliente. Em tensão/frustração, usa request_type=priority_callback só com telefone e autorização, sem exigir triagem nem recolha técnica completa. Só confirma envio com sent=true. Não tens consulta de faturas/garantia nem transferência. Usa ignore_background_audio para ruído, sem responder.'
     : '\nCONTEXTO: Esta é uma chamada de teste. Identifica-te como IA em teste. Não existem ferramentas para guardar ou enviar reclamações ou transferir chamadas; nunca afirmes ter executado essas ações.';
   return readFileSync(existsSync(saved) ? saved : fallback, 'utf8') + context;
 }

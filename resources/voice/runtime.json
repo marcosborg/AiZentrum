@@ -33,7 +33,7 @@
     {
       "type": "function",
       "name": "submit_complaint",
-      "description": "Envia a reclamação para geral@zentrum-group.com apenas após confirmar origem Zentrum, garantia e obter autorização de envio do cliente. Uma submissão por conversa. Nunca envia casos fora da triagem. Só confirma envio quando o resultado for sent=true. Só envia se a recolha for suficiente: nome, contacto utilizável, peça identificada e problema claro, sem contradições essenciais. Caso contrário, pede apenas o dado essencial em falta; não envies conversa incompleta.",
+      "description": "Envia support apenas com origem Zentrum, garantia, dados essenciais e autorização. Em caso de tensão/frustração ou pedido de pessoa, interrompe perguntas e usa priority_callback: requer só telefone utilizável, autorização e motivo factual breve; pode faltar nome/peça/origem/garantia. Só confirma envio com sent=true. Destino fixo geral@zentrum-group.com. Não inventes dados.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -61,11 +61,18 @@
           },
           "collection_sufficient": {
             "type": "boolean",
-            "description": "Verdadeiro apenas após avaliar que há informação suficiente e coerente para a equipa tratar o caso."
+            "description": "support: dados essenciais completos. priority_callback: apenas telefone utilizável, autorização e motivo breve para contacto humano."
           },
           "collection_assessment": {
             "type": "string",
             "description": "Justificação factual breve da suficiência: identificação, contacto, peça e problema compreendidos. Não inventar dados para satisfazer a regra."
+          },
+          "request_type": {
+            "enum": [
+              "support",
+              "priority_callback"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -77,7 +84,8 @@
           "part",
           "summary",
           "collection_sufficient",
-          "collection_assessment"
+          "collection_assessment",
+          "request_type"
         ],
         "additionalProperties": false
       }

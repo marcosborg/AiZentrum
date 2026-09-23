@@ -18,7 +18,7 @@ class VoiceTestController extends Controller
     public function saveInstructions(Request $request)
     {
         \Illuminate\Support\Facades\Gate::authorize('user_management_access');
-        $data = $request->validate(['instructions' => ['required', 'string', 'max:20000']]);
+        $data = $request->validate(['instructions' => ['required', 'string', 'max:24000']]);
         app(\App\Services\VoiceInstructions::class)->save($data['instructions']);
         return response()->json(['message' => 'Instruções guardadas. Serão usadas nas próximas chamadas e testes.']);
     }

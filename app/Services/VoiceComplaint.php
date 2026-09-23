@@ -10,10 +10,12 @@ class VoiceComplaint
 {
     public function submit(string $id, array $data, string $channel): array
     {
+        $callback = ($data['request_type'] ?? 'support') === 'priority_callback';
         Validator::make(['id' => $id] + $data, [
             'id' => 'required|uuid',
-            'zentrum_origin' => 'required|boolean|accepted',
-            'under_warranty' => 'required|boolean|accepted',
+            'request_type' => 'sometimes|in:support,priority_callback',
+            'zentrum_origin' => $callback ? 'required|boolean' : 'required|boolean|accepted',
+            'under_warranty' => $callback ? 'required|boolean' : 'required|boolean|accepted',
             'customer_confirmed' => 'required|boolean|accepted',
             'collection_sufficient' => 'required|boolean|accepted',
             'collection_assessment' => 'required|string|min:20|max:1000',
@@ -21,8 +23,8 @@ class VoiceComplaint
             'contact' => 'required|string|max:200',
             'part' => 'required|string|max:300',
             'summary' => 'required|string|min:30|max:10000',
-        ])->after(function ($validator) use ($data) {
-            foreach (['customer_name','part','summary'] as $field) {
+        ])->after(function ($validator) use ($data, $callback) {
+            foreach ($callback ? ['summary'] : ['customer_name','part','summary'] as $field) {
                 $value = mb_strtolower(trim(is_string($data[$field] ?? null) ? $data[$field] : ''));
                 if (in_array($value, ['', 'não indicado', 'não indicada', 'não sei', 'desconhecido', 'desconhecida', 'não confirmado', 'n/a', 'nenhum'])) {
                     $validator->errors()->add($field, 'Informação essencial em falta.');
@@ -30,11 +32,14 @@ class VoiceComplaint
             }
             $contact = is_string($data['contact'] ?? null) ? trim($data['contact']) : '';
             $phone = preg_replace('/[\s().+\-]/', '', $contact);
-            if (!filter_var($contact, FILTER_VALIDATE_EMAIL) && !preg_match('/^\d{7,15}$/', $phone)) {
+            if (!preg_match('/^\d{7,15}$/', $phone) && ($callback || !filter_var($contact, FILTER_VALIDATE_EMAIL))) {
                 $validator->errors()->add('contact', 'Indique um telefone ou email utilizável.');
             }
         })->validate();
-        $payload = array_intersect_key($data, array_flip(['zentrum_origin','under_warranty','customer_confirmed','collection_sufficient','collection_assessment','customer_name','contact','part','summary']));
+        $payload = array_intersect_key($data, array_flip(['request_type','zentrum_origin','under_warranty','customer_confirmed','collection_sufficient','collection_assessment','customer_name','contact','part','summary']));
+        $payload['conversation_id'] = $id;
+        // A late request for human contact must not be swallowed by an earlier support email.
+        if ($callback) $id = \Ramsey\Uuid\Uuid::uuid5(\Ramsey\Uuid\Uuid::NAMESPACE_URL, $id.':priority-callback')->toString();
         // A unique conversation ID claims the delivery once, including concurrent retries.
         $created = DB::table('voice_complaints')->insertOrIgnore([
             'id' => $id, 'channel' => $channel, 'status' => 'sending',
@@ -46,12 +51,15 @@ class VoiceComplaint
             return ['sent' => $status === 'sent', 'reference' => $id, 'status' => $status, 'duplicate' => true];
         }
         $body = "Pedido de suporte recebido pelo atendimento de voz\nReferência: $id\nCanal: $channel\n\n";
+        if ($callback) $body .= "CONTACTO PRIORITÁRIO SOLICITADO\nQuestionário interrompido para atendimento humano. Contactar com brevidade.\n\n";
         foreach (['customer_name'=>'Nome','contact'=>'Contacto','part'=>'Peça','summary'=>'Resumo'] as $key=>$label) $body .= "$label: {$payload[$key]}\n\n";
-        $body .= "Origem Zentrum e garantia declaradas pelo cliente; sujeitas a validação pela equipa. Envio autorizado pelo cliente.\n";
+        $body .= $callback
+            ? "Pedido de contacto humano autorizado pelo cliente. A recolha técnica pode estar incompleta; origem e garantia não foram validadas.\n"
+            : "Origem Zentrum e garantia declaradas pelo cliente; sujeitas a validação pela equipa. Envio autorizado pelo cliente.\n";
         try {
             // Do not use a log/array fallback and then claim that an email was sent.
             Mail::mailer('smtp')->raw($body, fn ($message) => $message
-                ->to(config('voice.recipient'))->subject('Pedido de suporte · Zentrum · '.$id));
+                ->to(config('voice.recipient'))->subject('Pedido de suporte · '.($callback ? 'Contacto prioritário · ' : '').'Zentrum · '.$id));
             DB::table('voice_complaints')->where('id', $id)->update(['status'=>'sent','sent_at'=>now(),'updated_at'=>now()]);
             return ['sent'=>true,'reference'=>$id,'status'=>'sent'];
         } catch (\Throwable $e) {
