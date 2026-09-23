@@ -15,16 +15,17 @@ class VoiceComplaintTest extends TestCase
         (require database_path('migrations/2026_09_23_120000_create_voice_complaints_table.php'))->up();
     }
     private function payload(): array {
-        return ['zentrum_origin'=>true,'under_warranty'=>true,'customer_confirmed'=>true,'customer_name'=>'Teste automático','contact'=>'Não indicado','part'=>'ABS','summary'=>'Reclamação fictícia para teste.'];
+        return ['zentrum_origin'=>true,'under_warranty'=>true,'customer_confirmed'=>true,'collection_sufficient'=>true,'collection_assessment'=>'Cliente identificado, contacto e peça conhecidos; problema descrito e resumo confirmado.','customer_name'=>'Teste automático','contact'=>'cliente@example.com','part'=>'ABS','summary'=>'Reclamação fictícia para teste: ABS falha após instalação.'];
     }
     public function test_sends_to_fixed_recipient_and_retries_do_not_duplicate(): void {
         $mailer = \Mockery::mock();
         Mail::shouldReceive('mailer')->once()->with('smtp')->andReturn($mailer);
         $mailer->shouldReceive('raw')->once()->andReturnUsing(function ($body, $callback) {
             $this->assertStringContainsString('Reclamação fictícia', $body);
+            $this->assertStringContainsString('Subtil desagrado recebido', $body);
             $message = \Mockery::mock();
             $message->shouldReceive('to')->once()->with('geral@zentrum-group.com')->andReturnSelf();
-            $message->shouldReceive('subject')->once()->with('Reclamação de voz Zentrum · '.$this->id)->andReturnSelf();
+            $message->shouldReceive('subject')->once()->with('Subtil desagrado · Zentrum · '.$this->id)->andReturnSelf();
             $callback($message);
         });
         $service = new VoiceComplaint;
@@ -34,7 +35,7 @@ class VoiceComplaintTest extends TestCase
     }
     public function test_ineligible_and_unconfirmed_cases_are_not_saved_or_sent(): void {
         Mail::shouldReceive('mailer')->never();
-        foreach (['zentrum_origin','under_warranty','customer_confirmed'] as $field) {
+        foreach (['zentrum_origin','under_warranty','customer_confirmed','collection_sufficient'] as $field) {
             try {
                 (new VoiceComplaint)->submit($this->id, array_replace($this->payload(), [$field=>false]), 'phone');
                 $this->fail('Ineligible submission accepted');
@@ -51,6 +52,16 @@ class VoiceComplaintTest extends TestCase
         $this->assertFalse($result['sent']);
         $this->assertSame('needs_review', $result['status']);
         $this->assertFalse($service->submit($this->id, $this->payload(), 'phone')['sent']);
+    }
+    public function test_incomplete_collection_is_blocked_even_when_marked_sufficient(): void {
+        Mail::shouldReceive('mailer')->never();
+        foreach (['contact'=>'Não indicado','customer_name'=>'não indicado','part'=>'desconhecida','summary'=>'Poucos dados.','collection_assessment'=>''] as $field=>$value) {
+            try {
+                (new VoiceComplaint)->submit($this->id, array_replace($this->payload(), [$field=>$value]), 'phone');
+                $this->fail('Incomplete collection accepted');
+            } catch (ValidationException $e) { $this->assertArrayHasKey($field, $e->errors()); }
+        }
+        $this->assertSame(0, DB::table('voice_complaints')->count());
     }
     public function test_phone_requires_secret_and_admin_endpoint_requires_login(): void {
         $body = ['session_id'=>$this->id,'arguments'=>$this->payload()];
