@@ -1,7 +1,7 @@
 {
   "audio": {
     "input": {"noise_reduction":{"type":"near_field"},"turn_detection":{"type":"server_vad","threshold":0.85,"prefix_padding_ms":300,"silence_duration_ms":800,"create_response":true,"interrupt_response":false}},
-    "output": {"voice":"marin","speed":0.85}
+    "output": {"voice":"cedar","speed":0.85}
   },
   "tools": [
     {"type":"function","name":"ignore_background_audio","description":"Fica em silêncio quando só há ruído, televisão, conversa de fundo ou áudio ininteligível sem uma resposta dirigida ao assistente. Não inventes palavras nem referências.","parameters":{"type":"object","properties":{},"required":[],"additionalProperties":false}},
