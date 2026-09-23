@@ -15,7 +15,7 @@
     },
     "output": {
       "voice": "cedar",
-      "speed": 0.85
+      "speed": 0.9
     }
   },
   "tools": [

@@ -22,10 +22,10 @@ class VoiceComplaintTest extends TestCase
         Mail::shouldReceive('mailer')->once()->with('smtp')->andReturn($mailer);
         $mailer->shouldReceive('raw')->once()->andReturnUsing(function ($body, $callback) {
             $this->assertStringContainsString('Reclamação fictícia', $body);
-            $this->assertStringContainsString('Subtil desagrado recebido', $body);
+            $this->assertStringContainsString('Pedido de suporte recebido', $body);
             $message = \Mockery::mock();
             $message->shouldReceive('to')->once()->with('geral@zentrum-group.com')->andReturnSelf();
-            $message->shouldReceive('subject')->once()->with('Subtil desagrado · Zentrum · '.$this->id)->andReturnSelf();
+            $message->shouldReceive('subject')->once()->with('Pedido de suporte · Zentrum · '.$this->id)->andReturnSelf();
             $callback($message);
         });
         $service = new VoiceComplaint;

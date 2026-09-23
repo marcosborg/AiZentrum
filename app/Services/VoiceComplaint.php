@@ -45,13 +45,13 @@ class VoiceComplaint
             $status = DB::table('voice_complaints')->where('id', $id)->value('status');
             return ['sent' => $status === 'sent', 'reference' => $id, 'status' => $status, 'duplicate' => true];
         }
-        $body = "Subtil desagrado recebido pelo atendimento de voz\nReferência: $id\nCanal: $channel\n\n";
+        $body = "Pedido de suporte recebido pelo atendimento de voz\nReferência: $id\nCanal: $channel\n\n";
         foreach (['customer_name'=>'Nome','contact'=>'Contacto','part'=>'Peça','summary'=>'Resumo'] as $key=>$label) $body .= "$label: {$payload[$key]}\n\n";
         $body .= "Origem Zentrum e garantia declaradas pelo cliente; sujeitas a validação pela equipa. Resumo confirmado pelo cliente.\n";
         try {
             // Do not use a log/array fallback and then claim that an email was sent.
             Mail::mailer('smtp')->raw($body, fn ($message) => $message
-                ->to(config('voice.recipient'))->subject('Subtil desagrado · Zentrum · '.$id));
+                ->to(config('voice.recipient'))->subject('Pedido de suporte · Zentrum · '.$id));
             DB::table('voice_complaints')->where('id', $id)->update(['status'=>'sent','sent_at'=>now(),'updated_at'=>now()]);
             return ['sent'=>true,'reference'=>$id,'status'=>'sent'];
         } catch (\Throwable $e) {
